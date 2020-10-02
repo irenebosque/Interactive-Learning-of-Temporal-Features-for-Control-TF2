@@ -7,7 +7,7 @@ from main_init import neural_network, transition_model, transition_model_type, a
 """
 Main loop of the algorithm described in the paper 'Interactive Learning of Temporal Features for Control' 
 """
-
+# prueba pycharm
 # Initialize variables
 total_feedback, total_time_steps, trajectories_database, total_reward = [], [], [], []
 t_total, h_counter, last_t_counter, omg_c, eval_counter, total_r = 1, 0, 0, 0, 0, 0
