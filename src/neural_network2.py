@@ -1,5 +1,4 @@
 import tensorflow as tf
-import tensorflow.contrib.layers as lays
 import os
 
 """
@@ -7,10 +6,10 @@ Neural network structure.
 """
 
 
-class NeuralNetwork:
+class NeuralNetwork(tf.keras.Model):
     def __init__(self, policy_learning_rate, transition_model_learning_rate, lstm_hidden_state_size,
                  load_transition_model, load_policy, dim_a, network_loc, image_size):
-
+        super(NeuralNetwork, self).__init__()
         self.lstm_hidden_state_size = lstm_hidden_state_size
         self.policy_learning_rate = policy_learning_rate
         self.image_width = image_size  # we assume that the image is a square
@@ -18,45 +17,39 @@ class NeuralNetwork:
         self.network_loc = network_loc
         self.transition_model_learning_rate = transition_model_learning_rate
 
-        # Build and load network if requested
-        self._build_network()
+        # Autoencoder encoder
+        self.conv1 = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')
+        self.layer_norm_conv1 = tf.keras.layers.LayerNormalization()
+        self.conv2 = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')
+        self.layer_norm_conv2 = tf.keras.layers.LayerNormalization()
+        self.conv3 = tf.keras.layers.Conv2D(4, [3, 3], strides=2, padding='same', activation='sigmoid', name='conv3')
 
-        if load_transition_model:
-            self._load_transition_model()
+        # Autoencoder decoder
+        self.deconv1 = tf.keras.layers.Conv2DTranspose(8, [3, 3], strides=2, padding='same', name='deconv1')
+        self.layer_norm_deconv1 = tf.keras.layers.LayerNormalization()
+        self.deconv2 = tf.keras.layers.Conv2DTranspose(16, [3, 3], strides=2, padding='same', name='deconv2')
+        self.layer_norm_deconv2 = tf.keras.layers.LayerNormalization()
+        self.deconv3 = tf.keras.layers.Conv2DTranspose(1, [3, 3], strides=2, padding='same', activation='sigmoid', name='deconv3')
 
-    def _build_network(self):  # check this
-        with tf.variable_scope('transition_model'):
-            # Create placeholders
-            transition_model_input = tf.placeholder(tf.float32, (None, self.image_width, self.image_width, 1), name='transition_model_input')
-            transition_model_label = tf.placeholder(tf.float32, (None, self.image_width, self.image_width, 1), name='transition_model_label')
 
-            # Convolutional encoder
-            conv1 = tf.contrib.layers.layer_norm(lays.conv2d(transition_model_input, 16, [3, 3], stride=2, padding='SAME'))
-            conv2 = tf.contrib.layers.layer_norm(lays.conv2d(conv1, 8, [3, 3], stride=2, padding='SAME'))
-            conv3 = lays.conv2d(conv2, 4, [3, 3], stride=2, padding='SAME', activation_fn=tf.nn.sigmoid)
-            conv3_shape = conv3.get_shape()
+    def call(self, x):
 
-            # Autoencoder latent space
-            latent_space = tf.contrib.layers.flatten(conv3)
-            self.state_representation = tf.identity(latent_space, name='state_representation')
-            latent_space_shape = latent_space.get_shape()
+        x = self.conv1(x)
+        x = self.layer_norm_conv1(x)
+        x = self.conv2(x)
+        x = self.layer_norm_conv2(x)
+        x = self.conv3(x)
+        x = self.deconv1(x)
+        x = self.layer_norm_deconv1(x)
+        x = self.deconv2(x)
+        x = self.layer_norm_deconv2(x)
+        x = self.deconv3(x)
+        transition_model_output = x
+        return transition_model_output
 
-            dec_input = conv3
-            # Autoencoder decoder
-            deconv1 = tf.contrib.layers.layer_norm(lays.conv2d_transpose(dec_input, 8, [3, 3], stride=2, padding='SAME'))
-            deconv2 = tf.contrib.layers.layer_norm(lays.conv2d_transpose(deconv1, 16, [3, 3], stride=2, padding='SAME'))
-            deconv3 = lays.conv2d_transpose(deconv2, 1, [3, 3], stride=2, padding='SAME', activation_fn=tf.nn.sigmoid)
 
-            self.transition_model_output = tf.identity(deconv3, name='transition_model_output')
-
-            # Prediction reconstruction loss
-            reconstruction_loss = tf.reduce_mean(tf.square(self.transition_model_output - transition_model_label))
-
-        # Autoencoder/Transition Model optimizer
-        variables_transition_model = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'transition_model')
-        self.train_transition_model = tf.train.AdamOptimizer(learning_rate=self.transition_model_learning_rate).minimize(reconstruction_loss, var_list=variables_transition_model)
-
-        # Initialize tensorflow
+    '''
+            # Initialize tensorflow
         init = tf.global_variables_initializer()
         self.sess = tf.Session()
         self.sess.run(init)
@@ -71,3 +64,4 @@ class NeuralNetwork:
 
     def _load_transition_model(self):
         self.saver_transition_model.restore(self.sess, self.network_loc + '_transition_model')
+    '''
