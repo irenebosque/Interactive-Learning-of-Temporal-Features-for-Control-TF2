@@ -6,7 +6,7 @@ import argparse
 from buffer import Buffer
 from agents.selector import agent_selector
 from transition_model2 import TransitionModel
-from simple_neural_network2 import NeuralNetwork
+from neural_network2 import NeuralNetwork
 from tools.functions import load_config_data
 #from tensorflow.compat.v1 import ConfigProto, InteractiveSession 
 
