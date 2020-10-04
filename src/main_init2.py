@@ -6,13 +6,13 @@ import argparse
 from buffer import Buffer
 from agents.selector import agent_selector
 from transition_model2 import TransitionModel
-from neural_network2 import NeuralNetwork
+from simple_neural_network2 import NeuralNetwork
 from tools.functions import load_config_data
-from tensorflow.compat.v1 import ConfigProto, InteractiveSession
+#from tensorflow.compat.v1 import ConfigProto, InteractiveSession 
 
-config = ConfigProto()
-config.gpu_options.allow_growth = True
-session = InteractiveSession(config=config)
+#config = ConfigProto()
+#config.gpu_options.allow_growth = True
+#session = InteractiveSession(config=config)
 
 """
 Script that initializes the variables used in the file main.py
@@ -21,7 +21,7 @@ Script that initializes the variables used in the file main.py
 
 # Read program args
 parser = argparse.ArgumentParser()
-parser.add_argument('--config-file', default='car_racing_DCOACH_full', help='select file in config_files folder')
+parser.add_argument('--config-file', default='mountain_car_DCOACH_full', help='select file in config_files folder')
 parser.add_argument('--exp-num', default='-1')
 args = parser.parse_args()
 
