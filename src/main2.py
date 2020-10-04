@@ -36,6 +36,15 @@ for i_episode in range(max_num_of_episodes):
     observation = env.reset()  # reset environment at the beginning of the episode
 
     past_action, past_observation, episode_trajectory, h_counter, r = None, None, [], 0, 0  # reset variables for new episode
+    '''
+    # Printing some stuff
+    print('PRINTING LAYERS OF THE MODEL: ')
+    # print all layers:
+    # print(neural_network.layers)  # irene
+
+    # print only one specific layer referring to it by its name:
+    print(neural_network.get_layer('conv3')) #irene
+    '''
 
     # Iterate over the episode
     for t in range(int(max_time_steps_episode)):
@@ -45,6 +54,12 @@ for i_episode in range(max_num_of_episodes):
 
         # Get state representation
         state_representation = transition_model.get_state_representation(neural_network, observation)
+        '''
+        # Printing the summary of the model:
+        print('SUMMARY: ')
+        print(neural_network.summary()) #irene
+        '''
+
 
         # Take random action
         action = env.action_space.sample()
