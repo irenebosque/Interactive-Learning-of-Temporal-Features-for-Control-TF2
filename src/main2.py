@@ -53,7 +53,9 @@ for i_episode in range(max_num_of_episodes):
             time.sleep(render_delay)  # Add delay to rendering if necessary
 
         # Get state representation
-        state_representation = transition_model.get_state_representation(neural_network, observation)
+        random_action = env.action_space.sample()  # irene
+        # Get state representation
+        state_representation = transition_model.get_state_representation(neural_network, observation, random_action)
         '''
         # Printing the summary of the model:
         print('SUMMARY: ')
