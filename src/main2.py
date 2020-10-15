@@ -54,8 +54,12 @@ for i_episode in range(max_num_of_episodes):
 
         # Get state representation
         random_action = env.action_space.sample()  # irene
+
+        # Preprocess_observation
+        transition_model._preprocess_observation(np.array(observation))
         # Get state representation
-        state_representation = transition_model.get_state_representation(neural_network, observation, random_action)
+        #state_representation = transition_model.get_state_representation(neural_network, observation, random_action)
+        #state_representation = transition_model.get_state_representation(neural_network, random_action)
         '''
         # Printing the summary of the model:
         print('SUMMARY: ')
@@ -84,7 +88,7 @@ for i_episode in range(max_num_of_episodes):
             episode_trajectory = []
 
         # Train transition model
-        transition_model.train(neural_network, t_total, done, trajectories_database)
+        transition_model.train(neural_network, t_total, done, trajectories_database, random_action)
 
         t_total += 1
 

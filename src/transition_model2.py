@@ -51,7 +51,7 @@ class TransitionModel:
                                                 self.image_width, 'Autoencoder Output', vmax=1.0)
 
     def _preprocess_observation(self, observation):
-        print('FUNCTION: def _preprocess_observation')
+        # print('FUNCTION: def _preprocess_observation')
         #observation = np.array(observation)
         if self.occlude_observation:
             observation[48:, :, :] = np.zeros(
@@ -71,6 +71,7 @@ class TransitionModel:
         self.network_input = tf.convert_to_tensor(self.network_input, dtype=tf.float32)
         print(type(self.network_input))
     def _refresh_image_plots(self, neural_network, random_action):
+        print('refhresinggg')
         if self.t_counter % 4 == 0 and self.show_observation:
             self.state_plot.refresh(self.processed_observation)
 
@@ -83,8 +84,8 @@ class TransitionModel:
 
 
             #model_lstm_hidden_state, model_state_representation, model_transition_model_output = neural_network.MyModel()
-            ae_model_output = self.model_transition_model_output.predict(
-                [self.network_input[-1], random_action, self.lstm_hidden_state])
+            #ae_model_output = self.model_transition_model_output.predict([self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
+            ae_model_output = self.model_transition_model_output([self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
             print('PREDICT2')
             '''
                   #ae_model_output = neural_network(self.network_input[-1])
@@ -95,7 +96,7 @@ class TransitionModel:
 
             self.ae_output_plot.refresh(ae_model_output)
 
-    def _train_model_from_database(self, neural_network, database):
+    def _train_model_from_database(self, neural_network, database, random_action):
         print('FUNCTION: def _train_model_from_database')
         episodes_num = len(database)
 
@@ -147,16 +148,28 @@ class TransitionModel:
             action_in = np.reshape(actions, [self.transition_model_sampling_size * self.training_sequence_length, self.dim_a])
             # Train transition model
 
-            input_to_encoder = np.reshape(predictions,
-                                          [self.transition_model_sampling_size, self.image_width, self.image_width, 1])
-
+            input_to_encoder = np.reshape(observations,
+                                          [self.transition_model_sampling_size * self.training_sequence_length, self.image_width, self.image_width, 1])
+            print('info sobre la input_to_enocder en el transition model')
+            print(type(input_to_encoder))
+            input_to_encoder = tf.convert_to_tensor(input_to_encoder, dtype=tf.float32)
+            input_to_encoder_shape = tuple(input_to_encoder.get_shape().as_list())
+            print(input_to_encoder_shape)
+            action_in = tf.convert_to_tensor(action_in, dtype=tf.float32)
+            #print('action_in')
+            #print(action_in)
             #output_from_decoder = neural_network(input_to_encoder)  # --> model(input)
-
-            neural_network.model_parameters(batchsize=self.transition_model_sampling_size, sequencelength=self.training_sequence_length, network_input_shape=self.network_input_shape,
+            # BORRAR ESTAS TRES LINEAS LUEGO
+            self.network_input_shape = tuple(self.network_input[-1].get_shape().as_list())
+            self.lstm_hidden_state_shape = self.lstm_hidden_state.shape
+            self.action_shape = action_in.shape
+            print('self.action_shape')
+            print(self.action_shape)
+            neural_network.model_parameters(batchsize=self.transition_model_sampling_size, sequencelength=self.training_sequence_length, network_input_shape=input_to_encoder_shape,
                                             lstm_hidden_state_shape=self.lstm_hidden_state_shape,
                                             action_shape=self.action_shape, lstm_hs_is_computed=False,
                                             autoencoder_mode=True)
-
+            self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
             #transition_model_output = self.model_transition_model_output.predict([input_to_encoder, action_in, self.lstm_hidden_state])
 
             '''
@@ -172,58 +185,92 @@ class TransitionModel:
             #objet_model_neural_network = NeuralNetwork(64, 64, 1) #cuando llamas a la funcion, te devuelve un modelo
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width, self.image_width, 1]),
 
-            mse = tf.keras.losses.MeanSquaredError()
-            my_loss = mse(transition_model_output, transition_model_label).numpy()
-            #self.model_transition_model_output.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError())
-            #self.model_transition_model_output.compile(optimizer='adam', loss=my_loss)
-            self.model_transition_model_output.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError())
-            '''
-            My guess is that when using the code above you do not need to specify the loss function because it does it
-            "automatically". Meaning that it knows that 'output_from_decoder' is the prediction and 'input_to_encoder 
-            is the target.
-
-            # The explanation for the arguments of the fit function was taken from:
-            https://www.tensorflow.org/tutorials/generative/autoencoder
-            "Train the model using x_train as both the input and the target. The encoder will learn to compress the 
-            dataset from 784 dimensions to the latent space, and the decoder will learn to reconstruct the original images." 
+            transition_model_label = tf.convert_to_tensor(transition_model_label, dtype=tf.float32)
 
             '''
+            my_loss = tf.keras.losses.MeanSquaredError()
+            optimizer = tf.keras.optimizers.SGD(learning_rate=0.05)
+            prediction_value = self.model_transition_model_output([input_to_encoder, action_in, self.lstm_hidden_state])
+            print('going to gradient')
+            with tf.GradientTape() as tape:
+                current_loss = my_loss(prediction_value, transition_model_label)
+                grads = tape.gradient(current_loss, self.model_transition_model_output.trainable_variables)
+            optimizer.apply_gradients(zip(grads, self.model_transition_model_output.trainable_variables))
+            '''
+            #prediction_value = self.model_transition_model_output([input_to_encoder, action_in, self.lstm_hidden_state])
 
-            #self.model_transition_model_output.fit(input_to_encoder, input_to_encoder)
+            '''
+              print('**************************')
+            print('prediction_value')
+            print(type(prediction_value))
+            print(tf.shape(prediction_value))
+            print('transition_model_label')
+            print(type(transition_model_label))
+            print(tf.shape(transition_model_label))
+            
+            '''
 
-            self.model_transition_model_output.fit({"transition_model_input": transition_model_input, "action_in": action_in, "computed_lstm_hs": computed_lstm_hs},{"transition_model_output": transition_model_output})
 
-            @tf.function
-            def _get_gradient(self, datum, target):  # Backend TF - get loss and compute gradients based on current batch
-                with tf.GradientTape() as tape:
-                    tape.watch(self.dense_1.variables)
-                    tape.watch(self.dense_2.variables)
-                    tape.watch(self.dense_3.variables)
-                    loss = self._get_loss(datum, target)
-                grad = tape.gradient(loss, [self.dense_1.variables[0], self.dense_1.variables[1],
-                                    self.dense_2.variables[0], self.dense_2.variables[1],
-                                    self.dense_3.variables[0], self.dense_3.variables[1]])
-                return grad
+            print('***************************')
 
-    @tf.function
-    def _learn(self, datum, target):  # Backend TF - get gradient and update the network
-        g = self._get_gradient(datum, target)
-        self.optimiser.apply_gradients(zip(g, [self.dense_1.variables[0], self.dense_1.variables[1],
-                                               self.dense_2.variables[0], self.dense_2.variables[1],
-                                               self.dense_3.variables[0], self.dense_3.variables[1]]))
 
-    def train(self, neural_network, t, done, database):
-        print('FUNCTION: DEF train')
+            optimizer = tf.keras.optimizers.SGD(learning_rate=0.05)
+            print('square')
+            #print(square)
+            print('***************************')
+            print('self.model_transition_model_output.trainable_variables')
+            #print(self.model_transition_model_output.trainable_variables)
+            tf.keras.utils.plot_model(self.model_transition_model_output)
+
+
+            #print('lossssss')
+            #print(loss)
+            #my_loss = tf.keras.losses.MeanSquaredError()
+            #self.model_transition_model_output.compile(optimizer='adam', loss=current_loss)
+
+            with tf.GradientTape() as tape:
+                '''
+                print('current_loss')
+                print(type(current_loss))
+                print(current_loss)
+                current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
+                '''
+
+                prediction_value = self.model_transition_model_output([input_to_encoder, action_in])
+                current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
+
+                current_loss2 = tf.keras.losses.mean_squared_error(transition_model_label, prediction_value)
+                #current_loss = my_loss(prediction_value,transition_model_label)
+                grads = tape.gradient(current_loss, self.model_transition_model_output.trainable_variables)
+                print('grads')
+                print(grads)
+                print('current_loss')
+                print(tf.shape(current_loss))
+                print(current_loss)
+                print('current_loss2')
+                print(tf.shape(current_loss2))
+
+            optimizer.apply_gradients(zip(grads, self.model_transition_model_output.trainable_variables))
+            print('jijijijijijjijiji')
+
+            #self.model_transition_model_output.fit({"transition_model_input": input_to_encoder, "action_in": action_in, "computed_lstm_hs": self.lstm_hidden_state},{"transition_model_output": prediction_value})
+
+
+
+
+
+    def train(self, neural_network, t, done, database, random_action):
+        #print('FUNCTION: DEF train')
         # Transition model training
         if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (
                 self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
-            self._train_model_from_database(neural_network, database)
+            self._train_model_from_database(neural_network, database, random_action)
 
-    #@tf.function(experimental_relax_shapes=True)
-    def get_state_representation(self, neural_network, observation, random_action):
-        print('FUNCTION: def get_state_representation')
 
-        self._preprocess_observation(np.array(observation))
+    def get_state_representation(self, neural_network, random_action):
+        #print('FUNCTION: def get_state_representation')
+
+        #self._preprocess_observation(np.array(observation))
         #self._preprocess_observation(observation)
         '''
         print('self.action_in')
@@ -254,25 +301,33 @@ class TransitionModel:
         #print(network_input_shape)
 
         #action_in = self._train_model_from_database.action_in
-        neural_network.model_parameters(batchsize=1, sequencelength=1, network_input_shape = self.network_input_shape, lstm_hidden_state_shape = self.lstm_hidden_state_shape, action_shape= self.action_shape, lstm_hs_is_computed = True, autoencoder_mode=False)
+        neural_network.model_parameters(batchsize=tf.constant(1), sequencelength=tf.constant(1), network_input_shape = self.network_input_shape, lstm_hidden_state_shape = self.lstm_hidden_state_shape, action_shape= self.action_shape, lstm_hs_is_computed = tf.constant(True), autoencoder_mode=tf.constant(False))
 
 
         self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
 
-        random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
-        lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
+        self.random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
+        self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
         #state_representation = self.model_state_representation.predict([self.network_input[-1], random_action, self.lstm_hidden_state])
+        print('LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOK')
 
-        print('random_action_tensor')
-        print(type(random_action_tensor))
+        print('self.network_input[-1]')
+        print(type(self.network_input[-1]))
+        print(tf.shape(self.network_input[-1]))
+        print('self.random_action_tensor')
+        print(type(self.random_action_tensor))
+        print(tf.shape(self.random_action_tensor))
         print('self.lstm_hidden_state_tensor')
-        print(type(lstm_hidden_state_tensor))
+        print(type(self.lstm_hidden_state_tensor))
+        print(tf.shape(self.lstm_hidden_state_tensor))
 
-        state_representation = self.model_state_representation.predict([self.network_input[-1], random_action_tensor, lstm_hidden_state_tensor])
+        #state_representation = self.model_state_representation.predict([self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
+        state_representation = self.model_state_representation([self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
         print('PREDICT')
         self._refresh_image_plots(neural_network, random_action)  # refresh image plots
         self.t_counter += 1
         return state_representation
+
 
     def get_state_representation_batch(self, neural_network, observation_sequence_batch, action_sequence_batch,
                                        current_observation):
