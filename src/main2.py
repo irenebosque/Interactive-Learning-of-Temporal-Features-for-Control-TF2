@@ -35,7 +35,7 @@ for i_episode in range(max_num_of_episodes):
 
     observation = env.reset()  # reset environment at the beginning of the episode
 
-    past_action, past_observation, episode_trajectory, h_counter, r, bandera1 = None, None, [], 0, 0 , 1 # reset variables for new episode
+    past_action, past_observation, episode_trajectory, h_counter, r, bandera1, bandera2 = None, None, [], 0, 0 , 1, 1 # reset variables for new episode
 
 
     # Iterate over the episode
@@ -82,7 +82,7 @@ for i_episode in range(max_num_of_episodes):
 
         # Train transition model
         print('LOOP: Train')
-        transition_model.train(neural_network, t_total, done, trajectories_database, random_action)
+        transition_model.train(neural_network, t_total, done, trajectories_database, random_action, bandera2)
 
         bandera1 = 0
 

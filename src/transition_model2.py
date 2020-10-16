@@ -86,7 +86,7 @@ class TransitionModel:
 
             self.ae_output_plot.refresh(ae_model_output)
 
-    def _train_model_from_database(self, neural_network, database, random_action):
+    def _train_model_from_database(self, neural_network, database, random_action, bandera2):
         print('TRANSITION-MODEL: _train_model_from_database')
         episodes_num = len(database)
 
@@ -159,7 +159,11 @@ class TransitionModel:
                                             lstm_hidden_state_shape=self.lstm_hidden_state_shape,
                                             action_shape=self.action_shape, lstm_hs_is_computed=False,
                                             autoencoder_mode=True)
-            self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
+
+            if bandera2 == 1:
+                self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
+
+
             # Print model summary, notice the shape of the input layer
             #self.model_transition_model_output.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
@@ -181,13 +185,13 @@ class TransitionModel:
                 grads = tape.gradient(current_loss, self.model_transition_model_output.trainable_variables)
 
             optimizer.apply_gradients(zip(grads, self.model_transition_model_output.trainable_variables))
-
-    def train(self, neural_network, t, done, database, random_action):
+            bandera2 = 0
+    def train(self, neural_network, t, done, database, random_action, bandera2):
         print('TRANSITION-MODEL: train')
         # Transition model training
         if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (
                 self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
-            self._train_model_from_database(neural_network, database, random_action)
+            self._train_model_from_database(neural_network, database, random_action, bandera2)
 
     def get_state_representation(self, neural_network, random_action, observation, bandera1):
         print('TRANSITION-MODEL: get_state_representation')
