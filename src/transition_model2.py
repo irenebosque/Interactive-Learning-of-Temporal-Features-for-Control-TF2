@@ -51,7 +51,7 @@ class TransitionModel:
                                                 self.image_width, 'Autoencoder Output', vmax=1.0)
 
     def _preprocess_observation(self, observation):
-
+        print('TRANSITION-MODEL: _preprocess_observation')
         if self.occlude_observation:
             observation[48:, :, :] = np.zeros(
                 [48, 96, 3]) + 127  # TODO: occlusion should be a function of the input size
@@ -70,7 +70,7 @@ class TransitionModel:
 
 
     def _refresh_image_plots(self, neural_network, random_action):
-
+        print('TRANSITION-MODEL: _refresh_image_plots')
         if self.t_counter % 4 == 0 and self.show_observation:
             self.state_plot.refresh(self.processed_observation)
 
@@ -87,7 +87,7 @@ class TransitionModel:
             self.ae_output_plot.refresh(ae_model_output)
 
     def _train_model_from_database(self, neural_network, database, random_action):
-
+        print('TRANSITION-MODEL: _train_model_from_database')
         episodes_num = len(database)
 
         print('Training Transition Model...')
@@ -183,14 +183,15 @@ class TransitionModel:
             optimizer.apply_gradients(zip(grads, self.model_transition_model_output.trainable_variables))
 
     def train(self, neural_network, t, done, database, random_action):
-
+        print('TRANSITION-MODEL: train')
         # Transition model training
         if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (
                 self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
             self._train_model_from_database(neural_network, database, random_action)
 
-    def get_state_representation(self, neural_network, random_action):
-
+    def get_state_representation(self, neural_network, random_action, observation, bandera1):
+        print('TRANSITION-MODEL: get_state_representation')
+        self._preprocess_observation(np.array(observation))
 
         self.network_input_shape = tuple(self.network_input[-1].get_shape().as_list())
         self.lstm_hidden_state_shape = self.lstm_hidden_state.shape
@@ -202,7 +203,13 @@ class TransitionModel:
                                         action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(True),
                                         autoencoder_mode=tf.constant(False))
 
-        self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
+
+        if bandera1 == 1:
+            self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
+
+
+        print(bandera1)
+        #self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
         #self.model_state_representation.summary()
         self.random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)

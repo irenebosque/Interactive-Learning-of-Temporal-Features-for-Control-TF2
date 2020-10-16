@@ -35,16 +35,8 @@ for i_episode in range(max_num_of_episodes):
 
     observation = env.reset()  # reset environment at the beginning of the episode
 
-    past_action, past_observation, episode_trajectory, h_counter, r = None, None, [], 0, 0  # reset variables for new episode
-    '''
-    # Printing some stuff
-    print('PRINTING LAYERS OF THE MODEL: ')
-    # print all layers:
-    # print(neural_network.layers)  # irene
+    past_action, past_observation, episode_trajectory, h_counter, r, bandera1 = None, None, [], 0, 0 , 1 # reset variables for new episode
 
-    # print only one specific layer referring to it by its name:
-    print(neural_network.get_layer('conv3')) #irene
-    '''
 
     # Iterate over the episode
     for t in range(int(max_time_steps_episode)):
@@ -52,14 +44,14 @@ for i_episode in range(max_num_of_episodes):
             env.render()  # Make the environment visible
             time.sleep(render_delay)  # Add delay to rendering if necessary
 
-        # Get state representation
+
         random_action = env.action_space.sample()  # irene
 
-        # Preprocess_observation
-        transition_model._preprocess_observation(np.array(observation))
+
 
         # Get state representation
-        state_representation = transition_model.get_state_representation(neural_network, random_action)
+        print('LOOP: Get state representation')
+        state_representation = transition_model.get_state_representation(neural_network, random_action, observation, bandera1)
 
 
 
@@ -68,9 +60,14 @@ for i_episode in range(max_num_of_episodes):
 
         # Act
         observation, reward, environment_done, info = env.step(action)
+        print('LOOP: Act')
 
         # Compute done
         done = environment_done
+
+        # Compute new hidden state of LSTM
+        #print('LOOP: Compute new hidden state of LSTM')
+        #transition_model.compute_lstm_hidden_state(neural_network, action)
 
         # Append transition to database
         if past_action is not None and past_observation is not None:
@@ -84,7 +81,10 @@ for i_episode in range(max_num_of_episodes):
             episode_trajectory = []
 
         # Train transition model
+        print('LOOP: Train')
         transition_model.train(neural_network, t_total, done, trajectories_database, random_action)
+
+        bandera1 = 0
 
         t_total += 1
 
@@ -117,4 +117,6 @@ for i_episode in range(max_num_of_episodes):
                 time.sleep(1)
 
             print('Total time (s):', '%.3f' % (time.time() - init_time))
+
+
             break
