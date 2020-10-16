@@ -247,9 +247,16 @@ class TransitionModel:
         print('FUNCTION: def compute_lstm_hidden_state')
         action = np.reshape(action, [1, self.dim_a])
 
-        self.lstm_hidden_state = neural_network.sess.run(neural_network.lstm_hidden_state,
-                                                         feed_dict={'transition_model/transition_model_input:0':
-                                                                        self.network_input[-1]})
+        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=tf.constant(1), sequencelength=tf.constant(1),
+                                        network_input_shape=self.network_input_shape,
+                                        lstm_hidden_state_shape=self.lstm_hidden_state_shape,
+                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False),
+                                        autoencoder_mode=tf.constant(False))
+
+        self.lstm_hidden_state = self.model_lstm_hidden_state(
+            [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
+
+
         self.last_actions.add(action)
 
     def last_step(self, action_label):
