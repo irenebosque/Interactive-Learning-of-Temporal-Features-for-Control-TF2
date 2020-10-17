@@ -221,7 +221,7 @@ class TransitionModel:
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
 
-        lstm_hidden_state, state_representation,transition_model_output = self.transition_model_predicting (
+        _, state_representation,_= self.transition_model_predicting(
             [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
 
 
@@ -260,7 +260,7 @@ class TransitionModel:
                                         action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False),
                                         autoencoder_mode=tf.constant(False))
 
-        self.lstm_hidden_state = self.model_lstm_hidden_state(
+        self.lstm_hidden_state, _, _ = self.transition_model_predicting(
             [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
 
 
