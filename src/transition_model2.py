@@ -80,11 +80,13 @@ class TransitionModel:
                                             action_shape=self.action_shape,
                                             lstm_hs_is_computed=True, autoencoder_mode=True)
 
-            ae_model_output = self.model_transition_model_output(
+
+            _, _, ae_model_output = self.transition_model_predicting (
                 [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
 
-
             self.ae_output_plot.refresh(ae_model_output)
+
+
 
     def _train_model_from_database(self, neural_network, database, random_action, bandera2):
         print('TRANSITION-MODEL: _train_model_from_database')
@@ -161,17 +163,17 @@ class TransitionModel:
                                             autoencoder_mode=True)
 
             if bandera2 == 1:
-                self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
+                self.transition_model_training = neural_network.MyModel()
 
 
             # Print model summary, notice the shape of the input layer
-            #self.model_transition_model_output.summary()
+            #self.transition_model_training.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
             transition_model_label = tf.convert_to_tensor(transition_model_label, dtype=tf.float32)
             # save model as a png
-            tf.keras.utils.plot_model(self.model_transition_model_output)
+            tf.keras.utils.plot_model(self.transition_model_training)
 
             # TRAIN
             optimizer = tf.keras.optimizers.SGD(learning_rate=0.05)
@@ -180,11 +182,12 @@ class TransitionModel:
 
             with tf.GradientTape() as tape:
 
-                prediction_value = self.model_transition_model_output([input_to_encoder, action_in])
-                current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
-                grads = tape.gradient(current_loss, self.model_transition_model_output.trainable_variables)
+                _, _, prediction_value = self.transition_model_training([input_to_encoder, action_in])
 
-            optimizer.apply_gradients(zip(grads, self.model_transition_model_output.trainable_variables))
+                current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
+                grads = tape.gradient(current_loss, self.transition_model_training.trainable_variables)
+
+            optimizer.apply_gradients(zip(grads, self.transition_model_training.trainable_variables))
             bandera2 = 0
     def train(self, neural_network, t, done, database, random_action, bandera2):
         print('TRANSITION-MODEL: train')
@@ -204,23 +207,23 @@ class TransitionModel:
         neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=tf.constant(1), sequencelength=tf.constant(1),
                                         network_input_shape=self.network_input_shape,
                                         lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(True),
+                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False),
                                         autoencoder_mode=tf.constant(False))
 
 
         if bandera1 == 1:
-            self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
+            self.transition_model_predicting = neural_network.MyModel()
 
 
-        print(bandera1)
-        #self.model_lstm_hidden_state, self.model_state_representation, self.model_transition_model_output = neural_network.MyModel()
-        #self.model_state_representation.summary()
+        #self.transition_model_predicting .summary()
+        #tf.keras.utils.plot_model(self.transition_model)
         self.random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
 
-        state_representation = self.model_state_representation(
+        lstm_hidden_state, state_representation,transition_model_output = self.transition_model_predicting (
             [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
+
 
         self._refresh_image_plots(neural_network, random_action)  # refresh image plots
         self.t_counter += 1
