@@ -164,10 +164,11 @@ class TransitionModel:
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
-
+            print('bandera2')
+            print(bandera2)
 
             # Print model summary, notice the shape of the input layer
-            #self.transition_model_training.summary()
+            self.transition_model_training.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
@@ -188,15 +189,19 @@ class TransitionModel:
                 grads = tape.gradient(current_loss, self.transition_model_training.trainable_variables)
 
             optimizer.apply_gradients(zip(grads, self.transition_model_training.trainable_variables))
-            bandera2 = 0
+
+            self.training_weights = self.transition_model_training.get_weights()
+            print(self.training_weights)
+
     def train(self, neural_network, t, done, database, random_action, bandera2):
         print('TRANSITION-MODEL: train')
         # Transition model training
-        if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (
-                self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
+        if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
+            print('mi otra ttttttttttttt')
+            print(t)
             self._train_model_from_database(neural_network, database, random_action, bandera2)
 
-    def get_state_representation(self, neural_network, random_action, observation, bandera1):
+    def get_state_representation(self, neural_network, random_action, observation, bandera1, i_episode):
         print('TRANSITION-MODEL: get_state_representation')
         self._preprocess_observation(np.array(observation))
 
@@ -215,9 +220,11 @@ class TransitionModel:
 
         if bandera1 == 1:
             self.transition_model_predicting = neural_network.MyModel()
+        if i_episode != 0:
 
+            self.transition_model_predicting.set_weights(self.training_weights)
 
-        #self.transition_model_predicting .summary()
+        self.transition_model_predicting .summary()
         #tf.keras.utils.plot_model(self.transition_model)
         self.random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)

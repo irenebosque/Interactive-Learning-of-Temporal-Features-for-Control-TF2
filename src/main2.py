@@ -33,13 +33,21 @@ if count_down:
 for i_episode in range(max_num_of_episodes):
     print('Starting episode number', i_episode)
 
+    if i_episode == 0:
+        bandera1 = 1
+        bandera2 = 1
+    else:
+        bandera1 = 0
+        bandera2 = 0
     observation = env.reset()  # reset environment at the beginning of the episode
 
-    past_action, past_observation, episode_trajectory, h_counter, r, bandera1, bandera2 = None, None, [], 0, 0 , 1, 1 # reset variables for new episode
+    past_action, past_observation, episode_trajectory, h_counter, r = None, None, [], 0, 0  # reset variables for new episode
 
 
     # Iterate over the episode
     for t in range(int(max_time_steps_episode)):
+        print('tttttttttttttttt')
+        print(t)
         if render:
             env.render()  # Make the environment visible
             time.sleep(render_delay)  # Add delay to rendering if necessary
@@ -51,7 +59,7 @@ for i_episode in range(max_num_of_episodes):
 
         # Get state representation
         print('LOOP: Get state representation')
-        state_representation = transition_model.get_state_representation(neural_network, random_action, observation, bandera1)
+        state_representation = transition_model.get_state_representation(neural_network, random_action, observation, bandera1, i_episode)
 
 
 
@@ -84,7 +92,7 @@ for i_episode in range(max_num_of_episodes):
         print('LOOP: Train')
         transition_model.train(neural_network, t_total, done, trajectories_database, random_action, bandera2)
 
-        bandera1 = 0
+
 
         t_total += 1
 
