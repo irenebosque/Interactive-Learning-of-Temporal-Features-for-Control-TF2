@@ -13,7 +13,7 @@ class NeuralNetwork:
 
     def model_parameters(self, batchsize_input_layer, batchsize, sequencelength, network_input_shape,
                          lstm_hidden_state_shape, action_shape,
-                         lstm_hs_is_computed, autoencoder_mode):
+                         lstm_hs_is_computed):
         self.batchsize_input_layer = batchsize_input_layer
         self.batchsize = batchsize
         self.sequencelength = sequencelength
@@ -22,7 +22,7 @@ class NeuralNetwork:
         self.network_input_shape = network_input_shape
         self.lstm_hidden_state_shape = lstm_hidden_state_shape
         self.action_shape = action_shape
-        self.autoencoder_mode = autoencoder_mode
+
 
     def MyModel(self):
         batch_size = self.batchsize
@@ -68,22 +68,19 @@ class NeuralNetwork:
         lstm_hidden_state_out = final_memory_state
         lstm_hidden_state = tf.cond(self.lstm_hs_is_computed, lambda: computed_lstm_hs, lambda: lstm_hidden_state_out)
 
-        #model_lstm_hidden_state = tf.keras.Model(inputs=[transition_model_input, action_in, computed_lstm_hs],
-                                                 #outputs=lstm_hidden_state)
+
 
         concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],
                              axis=1)
         # State representation
         state_representation = tf.keras.layers.Dense(1000, activation="tanh")(concat_2)
-        #model_state_representation = tf.keras.Model(inputs=[transition_model_input, action_in, computed_lstm_hs],
-                                                    #outputs=lstm_hidden_state)
 
         fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh")(state_representation)
         fc_4 = tf.reshape(fc_4, [-1, latent_space_shape[1]])
         fc_4 = tf.reshape(fc_4, [-1, conv3_shape[1], conv3_shape[2], conv3_shape[3]])  # go to shape of the latent space
 
         # Convolutional decoder
-        dec_input = tf.cond(self.autoencoder_mode, lambda: fc_4, lambda: conv3)
+        dec_input = fc_4
         x = tf.keras.layers.Conv2DTranspose(8, [3, 3], strides=2, padding='same', name='deconv1')(dec_input)
 
         x = tf.keras.layers.LayerNormalization()(x)
@@ -94,7 +91,6 @@ class NeuralNetwork:
 
         # Model creation
         model_transition_model_output = tf.keras.Model(inputs=[transition_model_input, action_in],
-                                                       outputs=[lstm_hidden_state, state_representation,transition_model_output])
-                                                       #outputs=[transition_model_output])
-        #outputs = [lstm_hidden_state, state_representation, transition_model_output])
+                                                       outputs=[lstm_hidden_state_out, state_representation,transition_model_output])
+
         return model_transition_model_output

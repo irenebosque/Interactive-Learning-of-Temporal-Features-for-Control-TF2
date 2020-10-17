@@ -78,7 +78,7 @@ class TransitionModel:
             neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=1, sequencelength=1, network_input_shape=self.network_input_shape,
                                             lstm_hidden_state_shape=self.lstm_hidden_state_shape,
                                             action_shape=self.action_shape,
-                                            lstm_hs_is_computed=True, autoencoder_mode=True)
+                                            lstm_hs_is_computed=True)
 
 
             _, _, ae_model_output = self.transition_model_predicting (
@@ -159,8 +159,8 @@ class TransitionModel:
                                             sequencelength=self.training_sequence_length,
                                             network_input_shape=input_to_encoder_shape,
                                             lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                            action_shape=self.action_shape, lstm_hs_is_computed=False,
-                                            autoencoder_mode=True)
+                                            action_shape=self.action_shape,
+                                            lstm_hs_is_computed=False)
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
@@ -204,11 +204,13 @@ class TransitionModel:
         self.lstm_hidden_state_shape = self.lstm_hidden_state.shape
         self.action_shape = random_action.shape  # IMPORTANT, in this function action WONT BE USED! but i write it to have all the inpputs defined
 
-        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=tf.constant(1), sequencelength=tf.constant(1),
+        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),
+                                        batchsize=tf.constant(1),
+                                        sequencelength=tf.constant(1),
                                         network_input_shape=self.network_input_shape,
                                         lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False),
-                                        autoencoder_mode=tf.constant(False))
+                                        action_shape=self.action_shape,
+                                        lstm_hs_is_computed=tf.constant(False))
 
 
         if bandera1 == 1:
@@ -257,8 +259,7 @@ class TransitionModel:
         neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=tf.constant(1), sequencelength=tf.constant(1),
                                         network_input_shape=self.network_input_shape,
                                         lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False),
-                                        autoencoder_mode=tf.constant(False))
+                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False))
 
         self.lstm_hidden_state, _, _ = self.transition_model_predicting(
             [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
