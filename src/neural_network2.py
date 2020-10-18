@@ -94,3 +94,20 @@ class NeuralNetwork:
                                                        outputs=[lstm_hidden_state_out, state_representation,transition_model_output])
 
         return model_transition_model_output
+
+    def my_policy(self):
+
+        # Inputs
+        state_representation_input  = tf.keras.layers.Input(shape=(1000), batch_size=self.batchsize_input_layer)
+        self.policy_input = tf.keras.layers.LayerNormalization()(state_representation_input)
+
+        # Fully connected layers
+        fc_5 = tf.keras.layers.Dense(1000, activation="relu", name='fc_5')(self.policy_input)
+        fc_6 = tf.keras.layers.Dense(1000, activation="relu", name='fc_6')(fc_5)
+        fc_7 = tf.keras.layers.Dense(self.dim_a, activation="tanh", name='fc_7')(fc_6)
+        self.policy_output = fc_7
+
+        # Model creation
+        model_policy = tf.keras.Model(inputs=[state_representation_input], outputs=[self.policy_output])
+        return model_policy
+

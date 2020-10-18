@@ -189,7 +189,8 @@ class TransitionModel:
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
-                #print('CREO MODELO TRAININGGG')
+                self.policy_model = neural_network.my_policy()
+
 
             # Print model summary, notice the shape of the input layer
             #self.transition_model_training.summary()
@@ -200,19 +201,37 @@ class TransitionModel:
             # save model as a png
             #tf.keras.utils.plot_model(self.transition_model_training)
 
-            # TRAIN
-            optimizer = tf.keras.optimizers.Adam(learning_rate=0.005)
+
+            '''
+            # TRAIN policy model
+            optimizer_policy_model = tf.keras.optimizers.SGD(learning_rate=0.003)
+           
+            with tf.GradientTape() as tape_policy:
+
+                policy_output = self.policy_model([STATE REPRESENTATION])
+
+                policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - POLICY LABEL))
+                grads = tape_policy.gradient(policy_loss, self.policy_model.trainable_variables)
+
+            optimizer_policy_model .apply_gradients(zip(grads, self.policy_model.trainable_variables))
+
+            '''
 
 
 
-            with tf.GradientTape() as tape:
+
+
+            # TRAIN transition model
+            optimizer_transition_model = tf.keras.optimizers.Adam(learning_rate=0.005) #irenee 0.0005 --> 0.005
+
+            with tf.GradientTape() as tape_transition:
 
                 _, _, prediction_value = self.transition_model_training([input_to_encoder, action_in])
 
                 current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
-                grads = tape.gradient(current_loss, self.transition_model_training.trainable_variables)
+                grads = tape_transition.gradient(current_loss, self.transition_model_training.trainable_variables)
 
-            optimizer.apply_gradients(zip(grads, self.transition_model_training.trainable_variables))
+            optimizer_transition_model.apply_gradients(zip(grads, self.transition_model_training.trainable_variables))
 
         if bandera3 == 1:
             self.training_weights = self.transition_model_training.get_weights()
@@ -269,6 +288,7 @@ class TransitionModel:
 
         self._refresh_image_plots(neural_network, random_action, ae_model_output)  # refresh image plots
         self.t_counter += 1
+
         return state_representation
 
     def get_state_representation_batch(self, neural_network, observation_sequence_batch, action_sequence_batch,
