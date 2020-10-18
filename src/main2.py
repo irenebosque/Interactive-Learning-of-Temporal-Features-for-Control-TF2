@@ -76,7 +76,7 @@ for i_episode in range(max_num_of_episodes):
 
         # Compute new hidden state of LSTM
         #print('LOOP: Compute new hidden state of LSTM')
-        transition_model.compute_lstm_hidden_state(neural_network, action)
+        #transition_model.compute_lstm_hidden_state(neural_network, action)
 
         # Append transition to database
         if past_action is not None and past_observation is not None:

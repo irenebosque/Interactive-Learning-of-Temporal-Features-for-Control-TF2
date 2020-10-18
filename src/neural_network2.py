@@ -30,7 +30,7 @@ class NeuralNetwork:
 
         transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=self.batchsize_input_layer)
         action_in = tf.keras.layers.Input(shape=(1), batch_size=self.batchsize_input_layer)
-        computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=self.batchsize_input_layer)
+        #computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=self.batchsize_input_layer)
 
         lstm_hidden_state_size = 150
 
@@ -73,9 +73,9 @@ class NeuralNetwork:
         concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],
                              axis=1)
         # State representation
-        state_representation = tf.keras.layers.Dense(1000, activation="tanh")(concat_2)
+        state_representation = tf.keras.layers.Dense(1000, activation="tanh", name='fc_3')(concat_2)
 
-        fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh")(state_representation)
+        fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_4')(state_representation)
         fc_4 = tf.reshape(fc_4, [-1, latent_space_shape[1]])
         fc_4 = tf.reshape(fc_4, [-1, conv3_shape[1], conv3_shape[2], conv3_shape[3]])  # go to shape of the latent space
 
@@ -125,9 +125,9 @@ class NeuralNetwork:
         concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],axis=1)
 
         # State representation
-        state_representation = tf.keras.layers.Dense(1000, activation="tanh")(concat_2)
+        state_representation = tf.keras.layers.Dense(1000, activation="tanh", name='fc_3')(concat_2)
 
-        fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh")(state_representation)
+        fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_4')(state_representation)
         fc_4 = tf.reshape(fc_4, [-1, latent_space_shape[1]])
         fc_4 = tf.reshape(fc_4, [-1, conv3_shape[1], conv3_shape[2], conv3_shape[3]])  # go to shape of the latent space
 
