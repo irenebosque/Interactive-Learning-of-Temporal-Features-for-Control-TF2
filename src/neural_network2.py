@@ -37,9 +37,9 @@ class NeuralNetwork:
         # Convolutional encoder
 
         x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
-        x = tf.keras.layers.LayerNormalization()(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_conv1')(x)
         x = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')(x)
-        x = tf.keras.layers.LayerNormalization()(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_conv2')(x)
         conv3 = tf.keras.layers.Conv2D(4, [3, 3], strides=2, padding='same', activation='sigmoid', name='conv3')(x)
 
         conv3_shape = conv3.get_shape()
@@ -66,8 +66,8 @@ class NeuralNetwork:
         whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1)
 
         lstm_hidden_state_out = final_memory_state
-        lstm_hidden_state = tf.cond(self.lstm_hs_is_computed, lambda: computed_lstm_hs, lambda: lstm_hidden_state_out)
-
+        #lstm_hidden_state = tf.cond(self.lstm_hs_is_computed, lambda: computed_lstm_hs, lambda: lstm_hidden_state_out)
+        lstm_hidden_state = lstm_hidden_state_out
 
 
         concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],
@@ -83,17 +83,69 @@ class NeuralNetwork:
         dec_input = fc_4
         x = tf.keras.layers.Conv2DTranspose(8, [3, 3], strides=2, padding='same', name='deconv1')(dec_input)
 
-        x = tf.keras.layers.LayerNormalization()(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_deconv1')(x)
         x = tf.keras.layers.Conv2DTranspose(16, [3, 3], strides=2, padding='same', name='deconv2')(x)
-        x = tf.keras.layers.LayerNormalization()(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_deconv2')(x)
         transition_model_output = tf.keras.layers.Conv2DTranspose(1, [3, 3], strides=2, padding='same',
                                                                   activation='sigmoid', name='deconv3')(x)
+
+
 
         # Model creation
         model_transition_model_output = tf.keras.Model(inputs=[transition_model_input, action_in],
                                                        outputs=[lstm_hidden_state_out, state_representation,transition_model_output])
 
         return model_transition_model_output
+
+
+    def predicting_model(self):
+        batch_size = self.batchsize
+        sequence_length = self.sequencelength
+
+        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=self.batchsize_input_layer)
+        computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=self.batchsize_input_layer)
+
+        lstm_hidden_state_size = 150
+
+        # Convolutional encoder
+        x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
+        x = tf.keras.layers.LayerNormalization(name='norm_conv1')(x)
+        x = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_conv2')(x)
+        conv3 = tf.keras.layers.Conv2D(4, [3, 3], strides=2, padding='same', activation='sigmoid', name='conv3')(x)
+        conv3_shape = conv3.get_shape()
+
+        latent_space = tf.keras.layers.Flatten()(conv3)
+        latent_space_shape = latent_space.get_shape()
+
+        # Transform data into 3-D sequential structures: [batch size, sequence length, data size]
+
+        sequential_latent_space = tf.reshape(latent_space, shape=[batch_size, sequence_length, latent_space_shape[-1]])
+        lstm_hidden_state = computed_lstm_hs
+        concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],axis=1)
+
+        # State representation
+        state_representation = tf.keras.layers.Dense(1000, activation="tanh")(concat_2)
+
+        fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh")(state_representation)
+        fc_4 = tf.reshape(fc_4, [-1, latent_space_shape[1]])
+        fc_4 = tf.reshape(fc_4, [-1, conv3_shape[1], conv3_shape[2], conv3_shape[3]])  # go to shape of the latent space
+
+        # Convolutional decoder
+        dec_input = fc_4
+        x = tf.keras.layers.Conv2DTranspose(8, [3, 3], strides=2, padding='same', name='deconv1')(dec_input)
+
+        x = tf.keras.layers.LayerNormalization(name='norm_deconv1')(x)
+        x = tf.keras.layers.Conv2DTranspose(16, [3, 3], strides=2, padding='same', name='deconv2')(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_deconv2')(x)
+        transition_model_output = tf.keras.layers.Conv2DTranspose(1, [3, 3], strides=2, padding='same',
+                                                                  activation='sigmoid', name='deconv3')(x)
+
+        # Model creation
+        predicting_model = tf.keras.Model(inputs=[transition_model_input, computed_lstm_hs],
+                                                       outputs=[state_representation,transition_model_output])
+
+        return predicting_model
 
     def my_policy(self):
 

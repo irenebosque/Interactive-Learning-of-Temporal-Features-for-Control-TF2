@@ -190,7 +190,7 @@ class TransitionModel:
 
 
             # Print model summary, notice the shape of the input layer
-            #self.transition_model_training.summary()
+            self.transition_model_training.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
@@ -219,6 +219,9 @@ class TransitionModel:
         if bandera3 == 1:
             self.training_weights = self.transition_model_training.get_weights()
             #print('PILLO WEIGHTSSS')
+            someweis = self.transition_model_training.get_layer('conv1')
+            print(someweis)
+            #weights = self.transition_model_training.dense1.get_weights()
 
 
 
