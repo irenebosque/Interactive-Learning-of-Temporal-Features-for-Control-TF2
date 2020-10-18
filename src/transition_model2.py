@@ -205,7 +205,7 @@ class TransitionModel:
 
 
             # TRAIN transition model
-            optimizer_transition_model = tf.keras.optimizers.Adam(learning_rate=0.005) #irenee 0.0005 --> 0.005
+            optimizer_transition_model = tf.keras.optimizers.Adam(learning_rate=0.0005) #irenee 0.0005 --> 0.005
 
             with tf.GradientTape() as tape_transition:
 
@@ -224,6 +224,12 @@ class TransitionModel:
             self.conv2_weights        = self.transition_model_training.get_layer('conv2').get_weights()
             self.norm_conv2_weights   = self.transition_model_training.get_layer('norm_conv2').get_weights()
             self.conv3_weights        = self.transition_model_training.get_layer('conv3').get_weights()
+
+            self.fc_1_weights         = self.transition_model_training.get_layer('fc_1').get_weights()
+            self.fc_2_weights         = self.transition_model_training.get_layer('fc_2').get_weights()
+            self.rnn_layer_weights    = self.transition_model_training.get_layer('rnn_layer').get_weights()
+
+
             self.fc_3_weights         = self.transition_model_training.get_layer('fc_3').get_weights()
             self.fc_4_weights         = self.transition_model_training.get_layer('fc_4').get_weights()
             self.deconv1_weights      = self.transition_model_training.get_layer('deconv1').get_weights()
@@ -330,7 +336,7 @@ class TransitionModel:
 
         return state_representation_batch
 
-    def compute_lstm_hidden_state(self, neural_network, action):
+    def compute_lstm_hidden_state(self, neural_network, action, i_episode, t):
         #print('FUNCTION: def compute_lstm_hidden_state')
         action = np.reshape(action, [1, self.dim_a])
         self.action_tensor = tf.convert_to_tensor(action, dtype=tf.float32)
@@ -339,7 +345,29 @@ class TransitionModel:
                                         lstm_hidden_state_shape=self.lstm_hidden_state_shape,
                                         action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False))
 
-        self.lstm_hidden_state, _, _ = self.transition_model_predicting(
+
+
+        if i_episode == 0 and t == 0:
+            self.model_compute_lstm_hidden_state = neural_network.compute_lstm_hidden_state_model()
+            #print('CREO MODELO PREDICTINGG')
+
+
+
+        if i_episode != 0 and t == 0:
+            self.model_compute_lstm_hidden_state.get_layer('conv1').set_weights(self.conv1_weights)
+            self.model_compute_lstm_hidden_state.get_layer('norm_conv1').set_weights(self.norm_conv1_weights)
+            self.model_compute_lstm_hidden_state.get_layer('conv2').set_weights(self.conv2_weights)
+            self.model_compute_lstm_hidden_state.get_layer('norm_conv2').set_weights(self.norm_conv2_weights)
+            self.model_compute_lstm_hidden_state.get_layer('conv3').set_weights(self.conv3_weights)
+
+            self.model_compute_lstm_hidden_state.get_layer('fc_1').set_weights(self.fc_1_weights)
+            self.model_compute_lstm_hidden_state.get_layer('fc_2').set_weights(self.fc_2_weights)
+            self.model_compute_lstm_hidden_state.get_layer('rnn_layer').set_weights(self.rnn_layer_weights)
+
+
+
+
+        self.lstm_hidden_state = self.model_compute_lstm_hidden_state(
             [self.network_input[-1], self.action_tensor])
 
 
