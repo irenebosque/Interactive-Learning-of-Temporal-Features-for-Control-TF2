@@ -186,7 +186,7 @@ class TransitionModel:
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
-                self.policy_model = neural_network.my_policy()
+
 
 
             # Print model summary, notice the shape of the input layer
@@ -199,20 +199,6 @@ class TransitionModel:
             #tf.keras.utils.plot_model(self.transition_model_training)
 
 
-            '''
-            # TRAIN policy model
-            optimizer_policy_model = tf.keras.optimizers.SGD(learning_rate=0.003)
-           
-            with tf.GradientTape() as tape_policy:
-
-                policy_output = self.policy_model([STATE REPRESENTATION])
-
-                policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - POLICY LABEL))
-                grads = tape_policy.gradient(policy_loss, self.policy_model.trainable_variables)
-
-            optimizer_policy_model .apply_gradients(zip(grads, self.policy_model.trainable_variables))
-
-            '''
 
 
 

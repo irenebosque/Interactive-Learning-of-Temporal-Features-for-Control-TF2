@@ -52,26 +52,27 @@ for i_episode in range(max_num_of_episodes):
         h = human_feedback.get_h()
         evaluation = human_feedback.evaluation
 
+        # Feed h to agent
+        agent.feed_h(h)
 
         random_action = env.action_space.sample()  # irene
 
 
 
-        # Get state representation
-        #print('LOOP: Get state representation')
+        # Map action from observation
         state_representation = transition_model.get_state_representation(neural_network, random_action, observation,  i_episode, t)
+        action = agent.action(neural_network, state_representation, i_episode, t)
 
 
-
-        # Take random action
-        action = env.action_space.sample()
 
         # Act
         observation, reward, environment_done, info = env.step(action)
         #print('LOOP: Act')
 
+
+
         # Compute done
-        done = environment_done
+        done = human_feedback.ask_for_done() or environment_done
 
         # Compute new hidden state of LSTM
         #print('LOOP: Compute new hidden state of LSTM')
@@ -91,6 +92,7 @@ for i_episode in range(max_num_of_episodes):
         # Train transition model
         #print('LOOP: Train')
         transition_model.train(neural_network, t_total, done, trajectories_database, random_action, i_episode)
+        agent.train(neural_network, transition_model, action, t_total, done)
 
 
 

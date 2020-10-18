@@ -40,9 +40,27 @@ class DCOACH:
             self.policy_action_label = np.reshape(action, [1, self.dim_a])
 
     def _single_update(self, neural_network, state_representation):
-        writer = tf.summary.FileWriter('logdir',  neural_network.sess.graph) # irene
+        #writer = tf.summary.FileWriter('logdir',  neural_network.sess.graph) # irene
+
+
+        # TRAIN policy model
+        optimizer_policy_model = tf.keras.optimizers.SGD(learning_rate=0.003)
+
+        with tf.GradientTape() as tape_policy:
+
+            policy_output = self.policy_model([state_representation])
+
+            policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - self.policy_action_label))
+            grads = tape_policy.gradient(policy_loss, self.policy_model.trainable_variables)
+
+        optimizer_policy_model .apply_gradients(zip(grads, self.policy_model.trainable_variables))
+
+
+        '''
         neural_network.sess.run(neural_network.train_policy, feed_dict={'policy/state_representation:0': state_representation,
                                                                         'policy/policy_label:0': self.policy_action_label})
+
+        '''
 
     def _batch_update(self, neural_network, transition_model, batch):
         observation_sequence_batch = [np.array(pair[0]) for pair in batch]  # state(t) sequence
@@ -59,12 +77,21 @@ class DCOACH:
     def feed_h(self, h):
         self.h = h
 
-    def action(self, neural_network, state_representation):
+    def action(self, neural_network, state_representation, i_episode, t):
         self.count += 1
         self.state_representation = state_representation
+        if i_episode == 0 and t == 0 :
+            self.policy_model = neural_network.my_policy()
 
-        action = neural_network.sess.run(neural_network.policy_output,
-                                         feed_dict={'policy/state_representation:0': self.state_representation})
+
+
+        action = self.policy_model([self.state_representation])
+        action = action.numpy()
+
+
+
+        #action = neural_network.sess.run(neural_network.policy_output,
+                                         #feed_dict={'policy/state_representation:0': self.state_representation})
         out_action = []
 
         for i in range(self.dim_a):
