@@ -69,20 +69,26 @@ class TransitionModel:
         self.network_input = tf.convert_to_tensor(self.network_input, dtype=tf.float32)
 
 
-    def _refresh_image_plots(self, neural_network, random_action):
+    def _refresh_image_plots(self, neural_network, random_action, ae_model_output):
         #print('TRANSITION-MODEL: _refresh_image_plots')
         if self.t_counter % 4 == 0 and self.show_observation:
             self.state_plot.refresh(self.processed_observation)
 
         if (self.t_counter + 2) % 4 == 0 and self.show_ae_output:
-            neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=1, sequencelength=1, network_input_shape=self.network_input_shape,
+            '''
+            neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=1, sequencelength=1,
+                                            network_input_shape=self.network_input_shape,
                                             lstm_hidden_state_shape=self.lstm_hidden_state_shape,
                                             action_shape=self.action_shape,
                                             lstm_hs_is_computed=True)
-
-
-            _, _, ae_model_output = self.transition_model_predicting (
+            
+            '''
+            '''
+             _, _, ae_model_output = self.transition_model_predicting (
                 [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
+            '''
+
+
 
             self.ae_output_plot.refresh(ae_model_output)
 
@@ -91,8 +97,8 @@ class TransitionModel:
     def _train_model_from_database(self, neural_network, database, random_action, i_episode, t):
         #print('TRANSITION-MODEL: _train_model_from_database')
         episodes_num = len(database)
-        print('episodioo')
-        print(i_episode)
+        #print('episodioo')
+        #print(i_episode)
 
 
         print('Training Transition Model...')
@@ -109,10 +115,12 @@ class TransitionModel:
                     bandera3 = 1
                 else:
                     bandera3 = 0
-                print('bandera2')
-                print(bandera2)
-                print('bandera3')
-                print(bandera3)
+
+
+                #print('bandera2')
+                #print(bandera2)
+                #print('bandera3')
+                #print(bandera3)
 
             observations, actions, predictions = [], [], []
 
@@ -181,7 +189,7 @@ class TransitionModel:
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
-                print('CREO MODELO TRAININGGG')
+                #print('CREO MODELO TRAININGGG')
 
             # Print model summary, notice the shape of the input layer
             #self.transition_model_training.summary()
@@ -193,7 +201,7 @@ class TransitionModel:
             #tf.keras.utils.plot_model(self.transition_model_training)
 
             # TRAIN
-            optimizer = tf.keras.optimizers.Adam(learning_rate=0.05)
+            optimizer = tf.keras.optimizers.Adam(learning_rate=0.005)
 
 
 
@@ -208,7 +216,7 @@ class TransitionModel:
 
         if bandera3 == 1:
             self.training_weights = self.transition_model_training.get_weights()
-            print('PILLO WEIGHTSSS')
+            #print('PILLO WEIGHTSSS')
 
 
 
@@ -239,14 +247,14 @@ class TransitionModel:
 
         if i_episode == 0 and t == 0:
             self.transition_model_predicting = neural_network.MyModel()
-            print('CREO MODELO PREDICTINGG')
+            #print('CREO MODELO PREDICTINGG')
 
 
 
         if i_episode != 0 and t == 0:
 
             self.transition_model_predicting.set_weights(self.training_weights)
-            print('PEGO WEITHSSS')
+            #print('PEGO WEITHSSS')
 
 
         #self.transition_model_predicting .summary()
@@ -255,11 +263,11 @@ class TransitionModel:
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
 
-        _, state_representation,_= self.transition_model_predicting(
+        _, state_representation, ae_model_output= self.transition_model_predicting(
             [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
+        #print(ae_model_output)
 
-
-        self._refresh_image_plots(neural_network, random_action)  # refresh image plots
+        self._refresh_image_plots(neural_network, random_action, ae_model_output)  # refresh image plots
         self.t_counter += 1
         return state_representation
 
