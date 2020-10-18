@@ -117,10 +117,7 @@ class TransitionModel:
                     bandera3 = 0
 
 
-                #print('bandera2')
-                #print(bandera2)
-                #print('bandera3')
-                #print(bandera3)
+
 
             observations, actions, predictions = [], [], []
 

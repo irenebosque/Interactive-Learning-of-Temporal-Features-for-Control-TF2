@@ -4,7 +4,7 @@ import os
 import argparse
 #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # switch to CPU
 from buffer import Buffer
-from agents.selector import agent_selector
+from agents.selector2 import agent_selector
 from transition_model2 import TransitionModel
 from neural_network2 import NeuralNetwork
 from tools.functions import load_config_data

@@ -42,15 +42,15 @@ for i_episode in range(max_num_of_episodes):
 
     # Iterate over the episode
     for t in range(int(max_time_steps_episode)):
-        if t == 0 and i_episode == 0:
-            bandera1 = 1
-        else:
-            bandera1 = 0
 
 
         if render:
             env.render()  # Make the environment visible
             time.sleep(render_delay)  # Add delay to rendering if necessary
+
+        # Get feedback signal
+        h = human_feedback.get_h()
+        evaluation = human_feedback.evaluation
 
 
         random_action = env.action_space.sample()  # irene
