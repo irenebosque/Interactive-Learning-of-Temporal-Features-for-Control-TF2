@@ -33,12 +33,8 @@ if count_down:
 for i_episode in range(max_num_of_episodes):
     print('Starting episode number', i_episode)
 
-    if i_episode == 0:
-        bandera1 = 1
-        bandera2 = 1
-    else:
-        bandera1 = 0
-        bandera2 = 0
+
+
     observation = env.reset()  # reset environment at the beginning of the episode
 
     past_action, past_observation, episode_trajectory, h_counter, r = None, None, [], 0, 0  # reset variables for new episode
@@ -46,8 +42,12 @@ for i_episode in range(max_num_of_episodes):
 
     # Iterate over the episode
     for t in range(int(max_time_steps_episode)):
-        print('tttttttttttttttt')
-        print(t)
+        if t == 0 and i_episode == 0:
+            bandera1 = 1
+        else:
+            bandera1 = 0
+
+
         if render:
             env.render()  # Make the environment visible
             time.sleep(render_delay)  # Add delay to rendering if necessary
@@ -58,8 +58,8 @@ for i_episode in range(max_num_of_episodes):
 
 
         # Get state representation
-        print('LOOP: Get state representation')
-        state_representation = transition_model.get_state_representation(neural_network, random_action, observation, bandera1, i_episode)
+        #print('LOOP: Get state representation')
+        state_representation = transition_model.get_state_representation(neural_network, random_action, observation,  i_episode, t)
 
 
 
@@ -68,13 +68,13 @@ for i_episode in range(max_num_of_episodes):
 
         # Act
         observation, reward, environment_done, info = env.step(action)
-        print('LOOP: Act')
+        #print('LOOP: Act')
 
         # Compute done
         done = environment_done
 
         # Compute new hidden state of LSTM
-        print('LOOP: Compute new hidden state of LSTM')
+        #print('LOOP: Compute new hidden state of LSTM')
         transition_model.compute_lstm_hidden_state(neural_network, action)
 
         # Append transition to database
@@ -89,8 +89,8 @@ for i_episode in range(max_num_of_episodes):
             episode_trajectory = []
 
         # Train transition model
-        print('LOOP: Train')
-        transition_model.train(neural_network, t_total, done, trajectories_database, random_action, bandera2)
+        #print('LOOP: Train')
+        transition_model.train(neural_network, t_total, done, trajectories_database, random_action, i_episode)
 
 
 

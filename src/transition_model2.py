@@ -51,7 +51,7 @@ class TransitionModel:
                                                 self.image_width, 'Autoencoder Output', vmax=1.0)
 
     def _preprocess_observation(self, observation):
-        print('TRANSITION-MODEL: _preprocess_observation')
+        #print('TRANSITION-MODEL: _preprocess_observation')
         if self.occlude_observation:
             observation[48:, :, :] = np.zeros(
                 [48, 96, 3]) + 127  # TODO: occlusion should be a function of the input size
@@ -70,7 +70,7 @@ class TransitionModel:
 
 
     def _refresh_image_plots(self, neural_network, random_action):
-        print('TRANSITION-MODEL: _refresh_image_plots')
+        #print('TRANSITION-MODEL: _refresh_image_plots')
         if self.t_counter % 4 == 0 and self.show_observation:
             self.state_plot.refresh(self.processed_observation)
 
@@ -88,14 +88,31 @@ class TransitionModel:
 
 
 
-    def _train_model_from_database(self, neural_network, database, random_action, bandera2):
-        print('TRANSITION-MODEL: _train_model_from_database')
+    def _train_model_from_database(self, neural_network, database, random_action, i_episode, t):
+        #print('TRANSITION-MODEL: _train_model_from_database')
         episodes_num = len(database)
+        print('episodioo')
+        print(i_episode)
+
 
         print('Training Transition Model...')
         for i in range(self.number_training_iterations):  # Train
             if i % (self.number_training_iterations / 20) == 0:
                 print('Progress Transition Model training: %i %%' % (i / self.number_training_iterations * 100))
+
+                if i == 0 and i_episode == 0:
+                    bandera2 = 1
+                else:
+                    bandera2 = 0
+
+                if i == 19:
+                    bandera3 = 1
+                else:
+                    bandera3 = 0
+                print('bandera2')
+                print(bandera2)
+                print('bandera3')
+                print(bandera3)
 
             observations, actions, predictions = [], [], []
 
@@ -164,20 +181,19 @@ class TransitionModel:
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
-            print('bandera2')
-            print(bandera2)
+                print('CREO MODELO TRAININGGG')
 
             # Print model summary, notice the shape of the input layer
-            self.transition_model_training.summary()
+            #self.transition_model_training.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
             transition_model_label = tf.convert_to_tensor(transition_model_label, dtype=tf.float32)
             # save model as a png
-            tf.keras.utils.plot_model(self.transition_model_training)
+            #tf.keras.utils.plot_model(self.transition_model_training)
 
             # TRAIN
-            optimizer = tf.keras.optimizers.SGD(learning_rate=0.05)
+            optimizer = tf.keras.optimizers.Adam(learning_rate=0.05)
 
 
 
@@ -190,19 +206,23 @@ class TransitionModel:
 
             optimizer.apply_gradients(zip(grads, self.transition_model_training.trainable_variables))
 
+        if bandera3 == 1:
             self.training_weights = self.transition_model_training.get_weights()
-            print(self.training_weights)
+            print('PILLO WEIGHTSSS')
 
-    def train(self, neural_network, t, done, database, random_action, bandera2):
-        print('TRANSITION-MODEL: train')
+
+
+
+    def train(self, neural_network, t, done, database, random_action, i_episode):
+        #print('TRANSITION-MODEL: train')
         # Transition model training
         if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
-            print('mi otra ttttttttttttt')
-            print(t)
-            self._train_model_from_database(neural_network, database, random_action, bandera2)
 
-    def get_state_representation(self, neural_network, random_action, observation, bandera1, i_episode):
-        print('TRANSITION-MODEL: get_state_representation')
+            self._train_model_from_database(neural_network, database, random_action, i_episode, t)
+
+    def get_state_representation(self, neural_network, random_action, observation, i_episode, t):
+        #print('TRANSITION-MODEL: get_state_representation')
+
         self._preprocess_observation(np.array(observation))
 
         self.network_input_shape = tuple(self.network_input[-1].get_shape().as_list())
@@ -217,14 +237,19 @@ class TransitionModel:
                                         action_shape=self.action_shape,
                                         lstm_hs_is_computed=tf.constant(False))
 
-
-        if bandera1 == 1:
+        if i_episode == 0 and t == 0:
             self.transition_model_predicting = neural_network.MyModel()
-        if i_episode != 0:
+            print('CREO MODELO PREDICTINGG')
+
+
+
+        if i_episode != 0 and t == 0:
 
             self.transition_model_predicting.set_weights(self.training_weights)
+            print('PEGO WEITHSSS')
 
-        self.transition_model_predicting .summary()
+
+        #self.transition_model_predicting .summary()
         #tf.keras.utils.plot_model(self.transition_model)
         self.random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
@@ -260,7 +285,7 @@ class TransitionModel:
         return state_representation_batch
 
     def compute_lstm_hidden_state(self, neural_network, action):
-        print('FUNCTION: def compute_lstm_hidden_state')
+        #print('FUNCTION: def compute_lstm_hidden_state')
         action = np.reshape(action, [1, self.dim_a])
 
         neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=tf.constant(1), sequencelength=tf.constant(1),
@@ -275,7 +300,7 @@ class TransitionModel:
         self.last_actions.add(action)
 
     def last_step(self, action_label):
-        print('FUNCTION: def last_step')
+        #print('FUNCTION: def last_step')
         if self.last_states.initialized() and self.last_actions.initialized():
             return [self.network_input[:-1],
                     self.last_actions.buffer[:-1],
@@ -285,7 +310,7 @@ class TransitionModel:
             return None
 
     def new_episode(self):
-        print('FUNCTION: def new_episode')
+        #print('FUNCTION: def new_episode')
         self.lstm_hidden_state = np.zeros([1, 2 * self.lstm_h_size])
         self.last_states = Buffer(min_size=self.training_sequence_length + 1,
                                   max_size=self.training_sequence_length + 1)
