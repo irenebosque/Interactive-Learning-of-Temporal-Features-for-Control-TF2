@@ -11,28 +11,24 @@ class NeuralNetwork:
         self.network_loc = network_loc
         self.transition_model_learning_rate = transition_model_learning_rate
 
-    def model_parameters(self, batchsize_input_layer, batchsize, sequencelength, network_input_shape,
-                         lstm_hidden_state_shape, action_shape,
-                         lstm_hs_is_computed):
-        self.batchsize_input_layer = batchsize_input_layer
-        self.batchsize = batchsize
-        self.sequencelength = sequencelength
-        self.lstm_hs_is_computed = lstm_hs_is_computed
+    def model_parameters(self, batch_size, sequence_length):
+        #self.batchsize_input_layer = batchsize_input_layer
+        self.batch_size = batch_size
+        self.sequence_length = sequence_length
 
-        self.network_input_shape = network_input_shape
-        self.lstm_hidden_state_shape = lstm_hidden_state_shape
-        self.action_shape = action_shape
+
+
+
+
 
 
     def MyModel(self):
-        batch_size = self.batchsize
-        sequence_length = self.sequencelength
 
-        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size= None)
-        action_in = tf.keras.layers.Input(shape=(1), batch_size=None)
-        #computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=self.batchsize_input_layer)
 
-        lstm_hidden_state_size = 150
+        transition_model_input = tf.keras.layers.Input(shape=(self.image_width, self.image_width, 1), batch_size = None)
+        action_in = tf.keras.layers.Input(shape=(self.dim_a), batch_size = None)
+
+
 
         # Convolutional encoder
 
@@ -54,23 +50,22 @@ class NeuralNetwork:
         concat_1_shape = concat_1.get_shape()
 
         # Transform data into 3-D sequential structures: [batch size, sequence length, data size]
-        sequential_concat_1 = tf.reshape(concat_1, shape=[batch_size, sequence_length, concat_1_shape[-1]])
-        sequential_latent_space = tf.reshape(latent_space, shape=[batch_size, sequence_length, latent_space_shape[-1]])
+        sequential_concat_1 = tf.reshape(concat_1, shape=[self.batch_size, self.sequence_length, concat_1_shape[-1]])
+        sequential_latent_space = tf.reshape(latent_space, shape=[self.batch_size, self.sequence_length, latent_space_shape[-1]])
+
 
         # LSTM
 
-        my_LSTMCell = tf.keras.layers.LSTMCell(lstm_hidden_state_size)
-        my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True,
-                                           return_state=True, name = 'rnn_layer')
+        my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
+        my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True, return_state=True, name = 'rnn_layer')
 
         whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1)
 
         lstm_hidden_state_out = final_memory_state
-        #lstm_hidden_state = tf.cond(self.lstm_hs_is_computed, lambda: computed_lstm_hs, lambda: lstm_hidden_state_out)
         lstm_hidden_state = lstm_hidden_state_out
 
 
-        concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],
+        concat_2 = tf.concat([lstm_hidden_state[:, -self.lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],
                              axis=1)
         # State representation
         state_representation = tf.keras.layers.Dense(1000, activation="tanh", name='fc_3')(concat_2)
@@ -99,13 +94,12 @@ class NeuralNetwork:
 
 
     def compute_lstm_hidden_state_model(self):
-        batch_size = self.batchsize
-        sequence_length = self.sequencelength
 
-        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=None)
-        action_in = tf.keras.layers.Input(shape=(1), batch_size=None)
 
-        lstm_hidden_state_size = 150
+        transition_model_input = tf.keras.layers.Input(shape=(self.image_width, self.image_width, 1), batch_size=None)
+        action_in = tf.keras.layers.Input(shape=(self.dim_a), batch_size=None)
+
+
 
         # Convolutional encoder
         x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
@@ -126,10 +120,10 @@ class NeuralNetwork:
         concat_1_shape = concat_1.get_shape()
 
         # Transform data into 3-D sequential structures: [batch size, sequence length, data size]
-        sequential_concat_1 = tf.reshape(concat_1, shape=[batch_size, sequence_length, concat_1_shape[-1]])
+        sequential_concat_1 = tf.reshape(concat_1, shape=[self.batch_size, self.sequence_length, concat_1_shape[-1]])
 
         # LSTM
-        my_LSTMCell = tf.keras.layers.LSTMCell(lstm_hidden_state_size)
+        my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
         my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True,
                                            return_state=True, name = 'rnn_layer')
 
@@ -147,13 +141,11 @@ class NeuralNetwork:
 
 
     def predicting_model(self):
-        batch_size = self.batchsize
-        sequence_length = self.sequencelength
 
-        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=None)
+
+        transition_model_input = tf.keras.layers.Input(shape=(self.image_width, self.image_width, 1), batch_size=None)
         computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=None)
 
-        lstm_hidden_state_size = 150
 
         # Convolutional encoder
         x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
@@ -168,9 +160,10 @@ class NeuralNetwork:
 
         # Transform data into 3-D sequential structures: [batch size, sequence length, data size]
 
-        sequential_latent_space = tf.reshape(latent_space, shape=[batch_size, sequence_length, latent_space_shape[-1]])
+        sequential_latent_space = tf.reshape(latent_space, shape=[self.batch_size, self.sequence_length, latent_space_shape[-1]])
         lstm_hidden_state = computed_lstm_hs
-        concat_2 = tf.concat([lstm_hidden_state[:, -lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],axis=1)
+
+        concat_2 = tf.concat([lstm_hidden_state[:, -self.lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],axis=1)
 
         # State representation
         state_representation = tf.keras.layers.Dense(1000, activation="tanh", name='fc_3')(concat_2)

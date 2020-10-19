@@ -75,26 +75,11 @@ class TransitionModel:
             self.state_plot.refresh(self.processed_observation)
 
         if (self.t_counter + 2) % 4 == 0 and self.show_ae_output:
-            '''
-            neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=1, sequencelength=1,
-                                            network_input_shape=self.network_input_shape,
-                                            lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                            action_shape=self.action_shape,
-                                            lstm_hs_is_computed=True)
-            
-            '''
-            '''
-             _, _, ae_model_output = self.transition_model_predicting (
-                [self.network_input[-1], self.random_action_tensor, self.lstm_hidden_state_tensor])
-            '''
-
-
-
             self.ae_output_plot.refresh(ae_model_output)
 
 
 
-    def _train_model_from_database(self, neural_network, database, random_action, i_episode, t):
+    def _train_model_from_database(self, neural_network, database, i_episode, t):
         #print('TRANSITION-MODEL: _train_model_from_database')
         episodes_num = len(database)
         #print('episodioo')
@@ -172,17 +157,12 @@ class TransitionModel:
 
             action_in = tf.convert_to_tensor(action_in, dtype=tf.float32)
 
-            self.network_input_shape = tuple(self.network_input[-1].get_shape().as_list())
-            self.lstm_hidden_state_shape = self.lstm_hidden_state.shape
-            self.action_shape = action_in.shape
 
-            neural_network.model_parameters(batchsize_input_layer = self.transition_model_sampling_size * self.training_sequence_length,
-                                            batchsize=self.transition_model_sampling_size,
-                                            sequencelength=self.training_sequence_length,
-                                            network_input_shape=input_to_encoder_shape,
-                                            lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                            action_shape=self.action_shape,
-                                            lstm_hs_is_computed=False)
+
+
+
+            neural_network.model_parameters(batch_size=self.transition_model_sampling_size,
+                                            sequence_length=self.training_sequence_length)
 
             if bandera2 == 1:
                 self.transition_model_training = neural_network.MyModel()
@@ -242,34 +222,25 @@ class TransitionModel:
 
 
 
-    def train(self, neural_network, t, done, database, random_action, i_episode):
+    def train(self, neural_network, t, done, database, i_episode):
         #print('TRANSITION-MODEL: train')
         # Transition model training
         if (t % self.transition_model_buffer_sampling_rate == 0 and t != 0) or (self.train_end_episode and done):  # Sim pendulum: 200; mountain car: done TODO: check if use done
 
-            self._train_model_from_database(neural_network, database, random_action, i_episode, t)
+            self._train_model_from_database(neural_network, database, i_episode, t)
 
-    def get_state_representation(self, neural_network, random_action, observation, i_episode, t):
+    def get_state_representation(self, neural_network, observation, i_episode, t):
         #print('TRANSITION-MODEL: get_state_representation')
 
         self._preprocess_observation(np.array(observation))
 
-        self.network_input_shape = tuple(self.network_input[-1].get_shape().as_list())
         self.lstm_hidden_state_shape = self.lstm_hidden_state.shape
-        self.action_shape = random_action.shape  # IMPORTANT, in this function action WONT BE USED! but i write it to have all the inpputs defined
 
-        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),
-                                        batchsize=tf.constant(1),
-                                        sequencelength=tf.constant(1),
-                                        network_input_shape=self.network_input_shape,
-                                        lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape,
-                                        lstm_hs_is_computed=tf.constant(False))
+        neural_network.model_parameters(batch_size=tf.constant(1),
+                                        sequence_length=tf.constant(1))
 
         if i_episode == 0 and t == 0:
             self.transition_model_predicting = neural_network.predicting_model()
-            #print('CREO MODELO PREDICTINGG')
-
 
 
         if i_episode != 0 and t == 0:
@@ -294,21 +265,12 @@ class TransitionModel:
 
 
 
-            #self.transition_model_predicting.set_weights(self.training_weights)
-
-        #self.conv1_weights = self.transition_model_training.get_layer('conv1')
-            #print('PEGO WEITHSSS')
-
-
-        #self.transition_model_predicting .summary()
-        #tf.keras.utils.plot_model(self.transition_model)
-        self.random_action_tensor = tf.convert_to_tensor(random_action, dtype=tf.float32)
         self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
 
         state_representation, ae_model_output= self.transition_model_predicting(
             [self.network_input[-1], self.lstm_hidden_state_tensor])
-        #print(ae_model_output)
+
 
         self._refresh_image_plots(ae_model_output)  # refresh image plots
         self.t_counter += 1
@@ -319,27 +281,17 @@ class TransitionModel:
                                        current_observation, buffer_length, i_episode, t):
 
         batch_size = len(observation_sequence_batch)
-        #print(t)
+
         if buffer_length == 20:
             # LSTM_HIDDEN_STATE_BATCH model
-            neural_network.model_parameters(batchsize_input_layer =tf.constant(1),
-                                        batchsize = batch_size,
-                                        sequencelength= self.training_sequence_length,
-                                        network_input_shape=self.network_input_shape,
-                                        lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape,
-                                        lstm_hs_is_computed=tf.constant(False))
+            neural_network.model_parameters(batch_size             = batch_size,
+                                            sequence_length        = self.training_sequence_length)
             self.model_lstm_hidden_state_batch = neural_network.compute_lstm_hidden_state_model()
             print('creo modelito1')
 
             # STATE REPRESENTATION BATCH model
-            neural_network.model_parameters(batchsize_input_layer=tf.constant(1),
-                                            batchsize=batch_size,
-                                            sequencelength=tf.constant(1),
-                                            network_input_shape=self.network_input_shape,
-                                            lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                            action_shape=self.action_shape,
-                                            lstm_hs_is_computed=tf.constant(False))
+            neural_network.model_parameters(batch_size=batch_size,
+                                            sequence_length=tf.constant(1))
             self.model_state_representation_batch = neural_network.predicting_model()
             print('creo modelito2')
 
@@ -399,13 +351,8 @@ class TransitionModel:
         action = np.reshape(action, [1, self.dim_a])
         self.action_tensor = tf.convert_to_tensor(action, dtype=tf.float32)
 
-        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),
-                                        batchsize=tf.constant(1),
-                                        sequencelength=tf.constant(1),
-                                        network_input_shape=self.network_input_shape,
-                                        lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape,
-                                        lstm_hs_is_computed=tf.constant(False))
+        neural_network.model_parameters(batch_size=tf.constant(1),
+                                        sequence_length=tf.constant(1))
 
 
 

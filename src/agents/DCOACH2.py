@@ -56,11 +56,7 @@ class DCOACH:
         optimizer_policy_model .apply_gradients(zip(grads, self.policy_model.trainable_variables))
 
 
-        '''
-        neural_network.sess.run(neural_network.train_policy, feed_dict={'policy/state_representation:0': state_representation,
-                                                                        'policy/policy_label:0': self.policy_action_label})
 
-        '''
 
     def _batch_update(self, neural_network, transition_model, batch, i_episode, t):
         observation_sequence_batch = [np.array(pair[0]) for pair in batch]  # state(t) sequence
