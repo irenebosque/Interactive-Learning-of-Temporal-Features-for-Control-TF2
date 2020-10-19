@@ -28,8 +28,8 @@ class NeuralNetwork:
         batch_size = self.batchsize
         sequence_length = self.sequencelength
 
-        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=self.batchsize_input_layer)
-        action_in = tf.keras.layers.Input(shape=(1), batch_size=self.batchsize_input_layer)
+        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size= None)
+        action_in = tf.keras.layers.Input(shape=(1), batch_size=None)
         #computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=self.batchsize_input_layer)
 
         lstm_hidden_state_size = 150
@@ -102,8 +102,8 @@ class NeuralNetwork:
         batch_size = self.batchsize
         sequence_length = self.sequencelength
 
-        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=self.batchsize_input_layer)
-        action_in = tf.keras.layers.Input(shape=(1), batch_size=self.batchsize_input_layer)
+        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=None)
+        action_in = tf.keras.layers.Input(shape=(1), batch_size=None)
 
         lstm_hidden_state_size = 150
 
@@ -150,8 +150,8 @@ class NeuralNetwork:
         batch_size = self.batchsize
         sequence_length = self.sequencelength
 
-        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=self.batchsize_input_layer)
-        computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=self.batchsize_input_layer)
+        transition_model_input = tf.keras.layers.Input(shape=(64, 64, 1), batch_size=None)
+        computed_lstm_hs = tf.keras.layers.Input(shape=(300), batch_size=None)
 
         lstm_hidden_state_size = 150
 
@@ -198,7 +198,7 @@ class NeuralNetwork:
     def my_policy(self):
 
         # Inputs
-        state_representation_input  = tf.keras.layers.Input(shape=(1000), batch_size=self.batchsize_input_layer)
+        state_representation_input  = tf.keras.layers.Input(shape=(1000), batch_size=None)
         self.policy_input = tf.keras.layers.LayerNormalization()(state_representation_input)
 
         # Fully connected layers

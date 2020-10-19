@@ -190,7 +190,7 @@ class TransitionModel:
 
 
             # Print model summary, notice the shape of the input layer
-            self.transition_model_training.summary()
+            #self.transition_model_training.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
@@ -316,34 +316,96 @@ class TransitionModel:
         return state_representation
 
     def get_state_representation_batch(self, neural_network, observation_sequence_batch, action_sequence_batch,
-                                       current_observation):
+                                       current_observation, buffer_length, i_episode, t):
 
         batch_size = len(observation_sequence_batch)
+        #print(t)
+        if buffer_length == 20:
+            # LSTM_HIDDEN_STATE_BATCH model
+            neural_network.model_parameters(batchsize_input_layer =tf.constant(1),
+                                        batchsize = batch_size,
+                                        sequencelength= self.training_sequence_length,
+                                        network_input_shape=self.network_input_shape,
+                                        lstm_hidden_state_shape=self.lstm_hidden_state_shape,
+                                        action_shape=self.action_shape,
+                                        lstm_hs_is_computed=tf.constant(False))
+            self.model_lstm_hidden_state_batch = neural_network.compute_lstm_hidden_state_model()
+            print('creo modelito1')
 
-        lstm_hidden_state_batch = neural_network.sess.run(neural_network.lstm_hidden_state,
-                                                          feed_dict={
-                                                              'transition_model/transition_model_input:0': np.reshape(
-                                                                  observation_sequence_batch,
-                                                                  [batch_batch_size, self.image_width, self.image_width,
-                                                                   1])})
+            # STATE REPRESENTATION BATCH model
+            neural_network.model_parameters(batchsize_input_layer=tf.constant(1),
+                                            batchsize=batch_size,
+                                            sequencelength=tf.constant(1),
+                                            network_input_shape=self.network_input_shape,
+                                            lstm_hidden_state_shape=self.lstm_hidden_state_shape,
+                                            action_shape=self.action_shape,
+                                            lstm_hs_is_computed=tf.constant(False))
+            self.model_state_representation_batch = neural_network.predicting_model()
+            print('creo modelito2')
 
-        state_representation_batch = neural_network.sess.run(neural_network.state_representation,
-                                                             feed_dict={
-                                                                 'transition_model/transition_model_input:0': np.reshape(
-                                                                     current_observation,
-                                                                     [batch_size, self.image_width, self.image_width,
-                                                                      1])})
+
+
+        # LSTM_HIDDEN_STATE_BATCH
+        if i_episode != 0:
+            self.model_lstm_hidden_state_batch.get_layer('conv1').set_weights(self.conv1_weights)
+            self.model_lstm_hidden_state_batch.get_layer('norm_conv1').set_weights(self.norm_conv1_weights)
+            self.model_lstm_hidden_state_batch.get_layer('conv2').set_weights(self.conv2_weights)
+            self.model_lstm_hidden_state_batch.get_layer('norm_conv2').set_weights(self.norm_conv2_weights)
+            self.model_lstm_hidden_state_batch.get_layer('conv3').set_weights(self.conv3_weights)
+
+            self.model_lstm_hidden_state_batch.get_layer('fc_1').set_weights(self.fc_1_weights)
+            self.model_lstm_hidden_state_batch.get_layer('fc_2').set_weights(self.fc_2_weights)
+            self.model_lstm_hidden_state_batch.get_layer('rnn_layer').set_weights(self.rnn_layer_weights)
+
+        transition_model_input= tf.convert_to_tensor(np.reshape(observation_sequence_batch, [batch_size * self.training_sequence_length, self.image_width, self.image_width, 1]), dtype=tf.float32)
+        action_in = tf.convert_to_tensor(np.reshape(action_sequence_batch,[batch_size * self.training_sequence_length, self.dim_a]), dtype=tf.float32)
+
+
+        lstm_hidden_state_batch = self.model_lstm_hidden_state_batch([transition_model_input, action_in])
+
+
+        # FALTA COPIAR LOS WEIGHTS! como es el mismo modelo que el usado en el compute lstm hidden state, no ha hecho falta
+        # definirlo dos veces en el fichero neural network, sino que haces otra duplica que admitira un batch size differente
+
+
+        # STATE REPRESENTATION BATCH
+        if i_episode != 0:
+            self.model_state_representation_batch.get_layer('conv1').set_weights(self.conv1_weights)
+            self.model_state_representation_batch.get_layer('norm_conv1').set_weights(self.norm_conv1_weights)
+            self.model_state_representation_batch.get_layer('conv2').set_weights(self.conv2_weights)
+            self.model_state_representation_batch.get_layer('norm_conv2').set_weights(self.norm_conv2_weights)
+            self.model_state_representation_batch.get_layer('conv3').set_weights(self.conv3_weights)
+
+            self.model_state_representation_batch.get_layer('fc_3').set_weights(self.fc_3_weights)
+            self.model_state_representation_batch.get_layer('fc_4').set_weights(self.fc_4_weights)
+
+            self.model_state_representation_batch.get_layer('deconv1').set_weights(self.deconv1_weights)
+            self.model_state_representation_batch.get_layer('norm_deconv1').set_weights(self.norm_deconv1_weights)
+            self.model_state_representation_batch.get_layer('deconv2').set_weights(self.deconv2_weights)
+            self.model_state_representation_batch.get_layer('norm_deconv2').set_weights(self.norm_deconv2_weights)
+            self.model_state_representation_batch.get_layer('deconv3').set_weights(self.deconv3_weights)
+
+        transition_model_input = tf.convert_to_tensor(np.reshape(current_observation,[batch_size, self.image_width, self.image_width, 1]),dtype=tf.float32)
+
+        state_representation_batch, _ = self.model_state_representation_batch([transition_model_input, lstm_hidden_state_batch])
 
         return state_representation_batch
+
+
+
 
     def compute_lstm_hidden_state(self, neural_network, action, i_episode, t):
         #print('FUNCTION: def compute_lstm_hidden_state')
         action = np.reshape(action, [1, self.dim_a])
         self.action_tensor = tf.convert_to_tensor(action, dtype=tf.float32)
-        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),batchsize=tf.constant(1), sequencelength=tf.constant(1),
+
+        neural_network.model_parameters(batchsize_input_layer =tf.constant(1),
+                                        batchsize=tf.constant(1),
+                                        sequencelength=tf.constant(1),
                                         network_input_shape=self.network_input_shape,
                                         lstm_hidden_state_shape=self.lstm_hidden_state_shape,
-                                        action_shape=self.action_shape, lstm_hs_is_computed=tf.constant(False))
+                                        action_shape=self.action_shape,
+                                        lstm_hs_is_computed=tf.constant(False))
 
 
 

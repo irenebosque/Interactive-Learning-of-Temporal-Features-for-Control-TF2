@@ -92,7 +92,7 @@ for i_episode in range(max_num_of_episodes):
         # Train transition model
         #print('LOOP: Train')
         transition_model.train(neural_network, t_total, done, trajectories_database, random_action, i_episode)
-        agent.train(neural_network, transition_model, action, t_total, done)
+        agent.train(neural_network, transition_model, action, t_total, done, i_episode)
 
 
 

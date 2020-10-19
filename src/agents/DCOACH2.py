@@ -1,6 +1,6 @@
 import numpy as np
 from tools.functions import str_2_array
-from buffer import Buffer
+from buffer2 import Buffer
 import tensorflow as tf # irene
 
 """
@@ -39,7 +39,7 @@ class DCOACH:
         else:
             self.policy_action_label = np.reshape(action, [1, self.dim_a])
 
-    def _single_update(self, neural_network, state_representation):
+    def _single_update(self, neural_network, state_representation, policy_label):
         #writer = tf.summary.FileWriter('logdir',  neural_network.sess.graph) # irene
 
 
@@ -50,7 +50,7 @@ class DCOACH:
 
             policy_output = self.policy_model([state_representation])
 
-            policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - self.policy_action_label))
+            policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - policy_label))
             grads = tape_policy.gradient(policy_loss, self.policy_model.trainable_variables)
 
         optimizer_policy_model .apply_gradients(zip(grads, self.policy_model.trainable_variables))
@@ -62,17 +62,17 @@ class DCOACH:
 
         '''
 
-    def _batch_update(self, neural_network, transition_model, batch):
+    def _batch_update(self, neural_network, transition_model, batch, i_episode, t):
         observation_sequence_batch = [np.array(pair[0]) for pair in batch]  # state(t) sequence
         action_sequence_batch = [np.array(pair[1]) for pair in batch]
         current_observation_batch = [np.array(pair[2]) for pair in batch]  # last
         action_label_batch = [np.array(pair[3]) for pair in batch]
 
-        state_representation_batch = transition_model.get_state_representation_batch(neural_network, observation_sequence_batch, action_sequence_batch, current_observation_batch)
+        state_representation_batch = transition_model.get_state_representation_batch(neural_network, observation_sequence_batch, action_sequence_batch, current_observation_batch, self.buffer.length(), i_episode, t)
 
-        neural_network.sess.run(neural_network.train_policy,
-                                feed_dict={'policy/state_representation:0': state_representation_batch,
-                                           'policy/policy_label:0': action_label_batch})
+        self._single_update(neural_network, state_representation_batch, action_label_batch)
+
+
 
     def feed_h(self, h):
         self.h = h
@@ -100,12 +100,12 @@ class DCOACH:
 
         return np.array(out_action)
 
-    def train(self, neural_network, transition_model, action, t, done):
+    def train(self, neural_network, transition_model, action, t, done, i_episode):
         self._generate_policy_label(action)
 
         # Policy training
         if np.any(self.h):  # if any element is not 0
-            self._single_update(neural_network, self.state_representation)
+            self._single_update(neural_network, self.state_representation, self.policy_action_label)
             print("feedback:", self.h)
 
             # Add last step to memory buffer
@@ -114,10 +114,12 @@ class DCOACH:
 
             # Train sampling from buffer
             if self.buffer.initialized():
+                print('buffer.initialized!!!!!!!!!!!')
+                print(self.buffer.length())
                 batch = self.buffer.sample(batch_size=self.buffer_sampling_size)  # TODO: probably this config thing should not be here
-                self._batch_update(neural_network, transition_model, batch)
+                self._batch_update(neural_network, transition_model, batch, i_episode, t)
 
         # Train policy every k time steps from buffer
         if self.buffer.initialized() and t % self.buffer_sampling_rate == 0 or (self.train_end_episode and done):
             batch = self.buffer.sample(batch_size=self.buffer_sampling_size)
-            self._batch_update(neural_network, transition_model, batch)
+            self._batch_update(neural_network, transition_model, batch, i_episode, t)
