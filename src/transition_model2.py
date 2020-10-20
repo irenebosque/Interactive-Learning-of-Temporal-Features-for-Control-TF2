@@ -285,14 +285,17 @@ class TransitionModel:
             # LSTM_HIDDEN_STATE_BATCH model
             neural_network.model_parameters(batch_size = batch_size,
                                             sequence_length = self.training_sequence_length)
-            self.model_lstm_hidden_state_batch = neural_network.compute_lstm_hidden_state_model()
-            print('creo modelito1')
+            self.model_lstm_hidden_state_batch = neural_network.transition_model()
+
+
+            print('Minimum buffer_length reached, Model "model_lstm_hidden_state_batch" created, give more feedback')
 
             # STATE REPRESENTATION BATCH model
             neural_network.model_parameters(batch_size = batch_size,
                                             sequence_length = tf.constant(1))
             self.model_state_representation_batch = neural_network.predicting_model()
-            print('creo modelito2')
+
+            print('Minimum buffer_length reached, Model "model_state_representation_batch" created, give more feedback')
 
 
 
@@ -312,7 +315,7 @@ class TransitionModel:
         action_in = tf.convert_to_tensor(np.reshape(action_sequence_batch,[batch_size * self.training_sequence_length, self.dim_a]), dtype=tf.float32)
 
 
-        lstm_hidden_state_batch = self.model_lstm_hidden_state_batch([transition_model_input, action_in])
+        lstm_hidden_state_batch, _, _ = self.model_lstm_hidden_state_batch([transition_model_input, action_in])
 
 
         # FALTA COPIAR LOS WEIGHTS! como es el mismo modelo que el usado en el compute lstm hidden state, no ha hecho falta
@@ -356,7 +359,7 @@ class TransitionModel:
 
 
         if i_episode == 0 and t == 0:
-            self.model_compute_lstm_hidden_state = neural_network.compute_lstm_hidden_state_model()
+            self.model_compute_lstm_hidden_state = neural_network.transition_model()
             #print('CREO MODELO PREDICTINGG')
 
 
@@ -372,17 +375,27 @@ class TransitionModel:
             self.model_compute_lstm_hidden_state.get_layer('fc_2').set_weights(self.fc_2_weights)
             self.model_compute_lstm_hidden_state.get_layer('rnn_layer').set_weights(self.rnn_layer_weights)
 
+            #self.model_compute_lstm_hidden_state.get_layer('fc_3').set_weights(self.fc_3_weights)
+            #self.model_compute_lstm_hidden_state.get_layer('fc_4').set_weights(self.fc_4_weights)
 
 
 
-        self.lstm_hidden_state = self.model_compute_lstm_hidden_state(
+            #self.transition_model_predicting.get_layer('deconv1').set_weights(self.deconv1_weights)
+            #self.transition_model_predicting.get_layer('norm_deconv1').set_weights(self.norm_deconv1_weights)
+            #self.transition_model_predicting.get_layer('deconv2').set_weights(self.deconv2_weights)
+            #self.transition_model_predicting.get_layer('norm_deconv2').set_weights(self.norm_deconv2_weights)
+            #self.transition_model_predicting.get_layer('deconv3').set_weights(self.deconv3_weights)
+
+
+
+        self.lstm_hidden_state,_ ,_ = self.model_compute_lstm_hidden_state(
             [self.network_input[-1], self.action_tensor])
 
 
         self.last_actions.add(action)
 
     def last_step(self, action_label):
-        print('FUNCTION: def last_step')
+        #print('FUNCTION: def last_step')
         if self.last_states.initialized() and self.last_actions.initialized():
             return [self.network_input[:-1],
                     self.last_actions.buffer[:-1],
@@ -392,7 +405,7 @@ class TransitionModel:
             return None
 
     def new_episode(self):
-        print('FUNCTION: def new_episode')
+        #print('FUNCTION: def new_episode')
         self.lstm_hidden_state = np.zeros([1, 2 * self.lstm_h_size])
         self.last_states = Buffer(min_size=self.training_sequence_length + 1,
                                   max_size=self.training_sequence_length + 1)

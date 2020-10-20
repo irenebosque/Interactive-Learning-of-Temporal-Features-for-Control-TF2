@@ -110,8 +110,8 @@ class DCOACH:
 
             # Train sampling from buffer
             if self.buffer.initialized():
-                print('buffer.initialized!!!!!!!!!!!')
-                print(self.buffer.length())
+                print("buffer.length():", self.buffer.length())
+
                 batch = self.buffer.sample(batch_size=self.buffer_sampling_size)  # TODO: probably this config thing should not be here
                 self._batch_update(neural_network, transition_model, batch, i_episode, t)
 

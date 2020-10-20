@@ -101,52 +101,6 @@ class NeuralNetwork:
 
 
 
-    def compute_lstm_hidden_state_model(self):
-
-
-        transition_model_input = tf.keras.layers.Input(shape=(self.image_width, self.image_width, 1), batch_size=None)
-        action_in = tf.keras.layers.Input(shape=(self.dim_a), batch_size=None)
-
-
-
-        # Convolutional encoder
-        x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
-        x = tf.keras.layers.LayerNormalization(name='norm_conv1')(x)
-        x = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')(x)
-        x = tf.keras.layers.LayerNormalization(name='norm_conv2')(x)
-        conv3 = tf.keras.layers.Conv2D(4, [3, 3], strides=2, padding='same', activation='sigmoid', name='conv3')(x)
-
-
-        latent_space = tf.keras.layers.Flatten()(conv3)
-        latent_space_shape = latent_space.get_shape()
-
-        # Combine latent space information with actions from the policy
-        fc_2 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_2')(latent_space)
-        fc_1 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_1')(action_in)
-
-        concat_1 = tf.concat([fc_1, fc_2], axis=1)
-        concat_1_shape = concat_1.get_shape()
-
-        # Transform data into 3-D sequential structures: [batch size, sequence length, data size]
-        sequential_concat_1 = tf.reshape(concat_1, shape=[self.batch_size, self.sequence_length, concat_1_shape[-1]])
-
-        # LSTM
-        my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
-        my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True,
-                                           return_state=True, name = 'rnn_layer')
-
-        whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1)
-
-        lstm_hidden_state_out = final_memory_state
-        lstm_hidden_state = lstm_hidden_state_out
-
-        # Model creation
-        model_lstm_hidden_state = tf.keras.Model(inputs=[transition_model_input, action_in],
-                                                       outputs=[lstm_hidden_state])
-
-        return model_lstm_hidden_state
-
-
 
     def predicting_model(self):
 
