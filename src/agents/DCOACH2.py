@@ -77,7 +77,7 @@ class DCOACH:
         self.count += 1
         self.state_representation = state_representation
         if i_episode == 0 and t == 0 :
-            self.policy_model = neural_network.my_policy()
+            self.policy_model = neural_network.policy_model()
 
 
 

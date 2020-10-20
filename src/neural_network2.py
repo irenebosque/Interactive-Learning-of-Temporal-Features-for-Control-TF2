@@ -12,26 +12,18 @@ class NeuralNetwork:
         self.transition_model_learning_rate = transition_model_learning_rate
 
     def model_parameters(self, batch_size, sequence_length):
-        #self.batchsize_input_layer = batchsize_input_layer
         self.batch_size = batch_size
         self.sequence_length = sequence_length
 
 
 
 
-
-
-
-    def MyModel(self):
-
-
+    def transition_model(self):
         transition_model_input = tf.keras.layers.Input(shape=(self.image_width, self.image_width, 1), batch_size = None)
         action_in = tf.keras.layers.Input(shape=(self.dim_a), batch_size = None)
 
 
-
         # Convolutional encoder
-
         x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
         x = tf.keras.layers.LayerNormalization(name='norm_conv1')(x)
         x = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')(x)
@@ -55,7 +47,6 @@ class NeuralNetwork:
 
 
         # LSTM
-
         my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
         my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True, return_state=True, name = 'rnn_layer')
 
@@ -84,13 +75,30 @@ class NeuralNetwork:
         transition_model_output = tf.keras.layers.Conv2DTranspose(1, [3, 3], strides=2, padding='same',
                                                                   activation='sigmoid', name='deconv3')(x)
 
-
-
         # Model creation
         model_transition_model_output = tf.keras.Model(inputs=[transition_model_input, action_in],
                                                        outputs=[lstm_hidden_state_out, state_representation,transition_model_output])
 
         return model_transition_model_output
+
+    def policy_model(self):
+
+        # Inputs
+        state_representation_input  = tf.keras.layers.Input(shape=(1000), batch_size=None)
+        self.policy_input = tf.keras.layers.LayerNormalization()(state_representation_input)
+
+        # Fully connected layers
+        fc_5 = tf.keras.layers.Dense(1000, activation="relu", name='fc_5')(self.policy_input)
+        fc_6 = tf.keras.layers.Dense(1000, activation="relu", name='fc_6')(fc_5)
+        fc_7 = tf.keras.layers.Dense(self.dim_a, activation="tanh", name='fc_7')(fc_6)
+        self.policy_output = fc_7
+
+        # Model creation
+        model_policy = tf.keras.Model(inputs=[state_representation_input], outputs=[self.policy_output])
+        return model_policy
+
+    #----------------------------
+
 
 
     def compute_lstm_hidden_state_model(self):
@@ -188,19 +196,5 @@ class NeuralNetwork:
 
         return predicting_model
 
-    def my_policy(self):
 
-        # Inputs
-        state_representation_input  = tf.keras.layers.Input(shape=(1000), batch_size=None)
-        self.policy_input = tf.keras.layers.LayerNormalization()(state_representation_input)
-
-        # Fully connected layers
-        fc_5 = tf.keras.layers.Dense(1000, activation="relu", name='fc_5')(self.policy_input)
-        fc_6 = tf.keras.layers.Dense(1000, activation="relu", name='fc_6')(fc_5)
-        fc_7 = tf.keras.layers.Dense(self.dim_a, activation="tanh", name='fc_7')(fc_6)
-        self.policy_output = fc_7
-
-        # Model creation
-        model_policy = tf.keras.Model(inputs=[state_representation_input], outputs=[self.policy_output])
-        return model_policy
 

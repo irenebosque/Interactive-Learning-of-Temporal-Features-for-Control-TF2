@@ -33,7 +33,8 @@ if count_down:
 for i_episode in range(max_num_of_episodes):
     print('Starting episode number', i_episode)
 
-
+    if not evaluation:
+        transition_model.new_episode()
 
     observation = env.reset()  # reset environment at the beginning of the episode
 
@@ -73,23 +74,31 @@ for i_episode in range(max_num_of_episodes):
         transition_model.compute_lstm_hidden_state(neural_network, action, i_episode, t)
 
         # Append transition to database
-        if past_action is not None and past_observation is not None:
-            episode_trajectory.append([past_observation, past_action,
-                                       transition_model.processed_observation])  # append o, a, o' (not really necessary to store it like this)
+        if not evaluation:
+            if past_action is not None and past_observation is not None:
+                episode_trajectory.append([past_observation, past_action, transition_model.processed_observation])  # append o, a, o' (not really necessary to store it like this)
 
-        past_observation, past_action = transition_model.processed_observation, action
+            past_observation, past_action = transition_model.processed_observation, action
 
-        if t % 100 == 0 or done:
-            trajectories_database.append(episode_trajectory)  # append episode trajectory to database
-            episode_trajectory = []
+            if t % 100 == 0 or done:
+                trajectories_database.append(episode_trajectory)  # append episode trajectory to database
+                episode_trajectory = []
 
-        # Train transition model
-        transition_model.train(neural_network, t_total, done, trajectories_database, i_episode)
-        agent.train(neural_network, transition_model, action, t_total, done, i_episode)
+        if np.any(h):
+            h_counter += 1
+
+        # Update weights transition model/policy
+        if not evaluation:
+            if done:
+                t_total = done  # tell the agents that the episode finished
+
+
+            transition_model.train(neural_network, t_total, done, trajectories_database, i_episode)
+            agent.train(neural_network, transition_model, action, t_total, done, i_episode)
 
 
 
-        t_total += 1
+            t_total += 1
 
         # Accumulate reward (not for learning purposes, only to quantify the performance of the agents)
         r += reward

@@ -82,8 +82,7 @@ class TransitionModel:
     def _train_model_from_database(self, neural_network, database, i_episode, t):
         #print('TRANSITION-MODEL: _train_model_from_database')
         episodes_num = len(database)
-        #print('episodioo')
-        #print(i_episode)
+
 
 
         print('Training Transition Model...')
@@ -165,7 +164,7 @@ class TransitionModel:
                                             sequence_length=self.training_sequence_length)
 
             if bandera2 == 1:
-                self.transition_model_training = neural_network.MyModel()
+                self.transition_model_training = neural_network.transition_model()
 
 
 
@@ -284,14 +283,14 @@ class TransitionModel:
 
         if buffer_length == 20:
             # LSTM_HIDDEN_STATE_BATCH model
-            neural_network.model_parameters(batch_size             = batch_size,
-                                            sequence_length        = self.training_sequence_length)
+            neural_network.model_parameters(batch_size = batch_size,
+                                            sequence_length = self.training_sequence_length)
             self.model_lstm_hidden_state_batch = neural_network.compute_lstm_hidden_state_model()
             print('creo modelito1')
 
             # STATE REPRESENTATION BATCH model
-            neural_network.model_parameters(batch_size=batch_size,
-                                            sequence_length=tf.constant(1))
+            neural_network.model_parameters(batch_size = batch_size,
+                                            sequence_length = tf.constant(1))
             self.model_state_representation_batch = neural_network.predicting_model()
             print('creo modelito2')
 
@@ -383,7 +382,7 @@ class TransitionModel:
         self.last_actions.add(action)
 
     def last_step(self, action_label):
-        #print('FUNCTION: def last_step')
+        print('FUNCTION: def last_step')
         if self.last_states.initialized() and self.last_actions.initialized():
             return [self.network_input[:-1],
                     self.last_actions.buffer[:-1],
@@ -393,7 +392,7 @@ class TransitionModel:
             return None
 
     def new_episode(self):
-        #print('FUNCTION: def new_episode')
+        print('FUNCTION: def new_episode')
         self.lstm_hidden_state = np.zeros([1, 2 * self.lstm_h_size])
         self.last_states = Buffer(min_size=self.training_sequence_length + 1,
                                   max_size=self.training_sequence_length + 1)
