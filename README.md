@@ -5,14 +5,14 @@ In TensorFlow 2 you can create a machine learning model following one of these 3
 2. Keras **Functional API**: More flexible than the Sequential API. It can handle shared layers, and multiple inputs or outputs.
 3. **Model Subclassing**: The most flexible method. Allows creating your own model class by inheriting from the keras Model class. With this method you can use keras layers or custom layers.
 
-In this code, both the `transition_model` and the `policy_model` have been created with the Keras Functional API available in TensorFlow2. ([Functional API in TensorFlow2 link](https://www.tensorflow.org/guide/keras/functional))
+In this code, both the `transition_model` and the `policy_model` have been created with the Keras **Functional API** available in TensorFlow2. ([Functional API in TensorFlow2 link](https://www.tensorflow.org/guide/keras/functional))
 
 ![transition model](transition_model.png)
 The previous diagram is obtained with the command `tf.keras.utils.plot_model(self.transition_model_training)`
 
 
 
-This Functional API makes the creation of a model easier but I also encounter some problems 
+This Functional API makes the creation of a model easier but I also encounter some problems:
 1. Variable batch size
 2. Different input layer to the model
 
@@ -22,7 +22,7 @@ A first issue is having a different batch size for training and predicting. I to
 
 *"A better solution is to use different batch sizes for training and predicting. The way to do this is to copy the weights from the fit network and to create a new network with the pre-trained weights. We can do this easily enough using the `get_weights()` and `set_weights()` functions"*
 
-Following this advice, I create a new instance of the model defined in `neural_network2.py` when it requires a different batch size or sequence length. Then, using `get_weights()`, I get the weights of the main model (`self.transition_model_training`) obtained at the end of the training of each episode, and set those weights  to the other instances of the model.
+Following this advice, I create a new instance of the model defined in `neural_network2.py` when it requires a different batch size or sequence length. Then, I get the weights of the main model (`self.transition_model_training`) obtained at the end of the training of each episode, and set those weights  to the other instances of the model.
 
 
 Main model:
