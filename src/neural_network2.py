@@ -46,15 +46,29 @@ class NeuralNetwork:
         sequential_latent_space = tf.reshape(latent_space, shape=[self.batch_size, self.sequence_length, latent_space_shape[-1]])
 
 
-        # LSTM
+        # LSTM (option 1)
         my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
         my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True, return_state=True, name = 'rnn_layer')
-
         whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1)
 
-        lstm_hidden_state_out = final_memory_state
-        lstm_hidden_state = lstm_hidden_state_out
 
+
+        # LSTM layer (option 2)
+        #lstm_in  = [tf.zeros((20, 150)), tf.zeros((20, 150))]
+        #lstm = tf.keras.layers.LSTM(self.lstm_hidden_state_size, return_sequences=True, return_state=True, name = 'rnn_layer')
+        #whole_seq_output, final_memory_state, final_carry_state = lstm(inputs=sequential_concat_1)
+
+
+        #check_initial_state = my_LSTMCell.get_initial_state(inputs=None, batch_size=None, dtype=None)
+        #print('check_initial_state: ')
+        #print(check_initial_state)
+        #print('whole_seq_output: ')
+        #print(whole_seq_output)
+
+        concat_lstm_states = tf.concat([final_carry_state, final_memory_state], 1)
+        #print(concat_lstm_states)
+        lstm_hidden_state_out = concat_lstm_states
+        lstm_hidden_state = lstm_hidden_state_out
 
         concat_2 = tf.concat([lstm_hidden_state[:, -self.lstm_hidden_state_size:], sequential_latent_space[:, -1, :]],
                              axis=1)
@@ -151,4 +165,69 @@ class NeuralNetwork:
         return predicting_model
 
 
+    def model_parameters_compute_lstm(self, batch_size, sequence_length, h_state, c_state):
+        self.batch_size = batch_size
+        self.sequence_length = sequence_length
+        self.h_state = h_state
+        self.c_state = c_state
+
+
+    def compute_lstm_model(self):
+        transition_model_input = tf.keras.layers.Input(shape=(self.image_width, self.image_width, 1), batch_size=None)
+        action_in = tf.keras.layers.Input(shape=(self.dim_a), batch_size=None)
+        #lstm_hidden_state_previous_time_step =  tf.keras.layers.Input(shape=(150,2), batch_size=None)
+
+        my_initial_state = [tf.cast(tf.reshape(self.h_state, [1, 150]), tf.float32),  tf.cast(tf.reshape(self.c_state, [1, 150]), tf.float32)]
+        zero_tensor =[tf.zeros([1, 150]), tf.zeros([1, 150])]
+
+
+
+
+
+        #print('zero_tensor')
+        #print(zero_tensor)
+        #print('my_initial_state')
+        #print(my_initial_state)
+        # Convolutional encoder
+        x = tf.keras.layers.Conv2D(16, [3, 3], strides=2, padding='same', name='conv1')(transition_model_input)
+        x = tf.keras.layers.LayerNormalization(name='norm_conv1')(x)
+        x = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')(x)
+        x = tf.keras.layers.LayerNormalization(name='norm_conv2')(x)
+        conv3 = tf.keras.layers.Conv2D(4, [3, 3], strides=2, padding='same', activation='sigmoid', name='conv3')(x)
+
+
+        latent_space = tf.keras.layers.Flatten()(conv3)
+        latent_space_shape = latent_space.get_shape()
+
+        # Combine latent space information with actions from the policy
+        fc_2 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_2')(latent_space)
+        fc_1 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_1')(action_in)
+
+        concat_1 = tf.concat([fc_1, fc_2], axis=1)
+        concat_1_shape = concat_1.get_shape()
+
+        # Transform data into 3-D sequential structures: [batch size, sequence length, data size]
+        sequential_concat_1 = tf.reshape(concat_1, shape=[self.batch_size, self.sequence_length, concat_1_shape[-1]])
+
+        # LSTM (option 1)
+        my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
+        #lstm_hidden_state_in = my_LSTMCell.zero_state(batch_size, tf.float32)
+
+
+        my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True, return_state=True, name='rnn_layer')
+        #whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1, initial_state = [tf.zeros([1, 150]), tf.zeros([1, 150])])
+        whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1,
+                                                                               initial_state=my_initial_state)
+        #whole_seq_output, final_memory_state, final_carry_state = my_RNN_layer(inputs=sequential_concat_1)
+
+        concat_lstm_states = tf.concat([final_carry_state, final_memory_state], 1)
+        # print(concat_lstm_states)
+        lstm_hidden_state_out = concat_lstm_states
+
+
+        # Model creation
+        model_compute_lstm = tf.keras.Model(inputs=[transition_model_input, action_in],
+                                                       outputs=[lstm_hidden_state_out])
+
+        return model_compute_lstm
 
