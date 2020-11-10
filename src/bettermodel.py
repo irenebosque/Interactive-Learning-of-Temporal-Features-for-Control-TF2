@@ -33,29 +33,28 @@ concat2_parte1 = final_memory_state[:, -150:]
 concat2_parte2 = latent_space[:, -1, :]
 concat_2 = tf.concat([concat2_parte1, concat2_parte2], axis=1)
 
-output = concat_2
-""" 
-concat_lstm_states = tf.concat([final_carry_state, final_memory_state], 1, name='concat_lstm_states')
-# print(concat_lstm_states)
-lstm_hidden_state_out = concat_lstm_states
 
 
-concat_2 = tf.concat([lstm_hidden_state_out[:, -150:], sequential_latent_space[:, -1, :]],
-                     axis=1, name='concat_2')
 # State representation
 state_representation = tf.keras.layers.Dense(1000, activation="tanh", name='fc_3')(concat_2)
 
-fc_4 = tf.keras.layers.Dense(latent_space_shape[1], activation="tanh", name='fc_4')(state_representation)
-fc_4 = tf.reshape(fc_4, [-1, latent_space_shape[1]])
-fc_4 = tf.reshape(fc_4, [-1, conv3_shape[1], conv3_shape[2], conv3_shape[3]])  # go to shape of the latent space
+fc_4 = tf.keras.layers.Dense(latent_space_shape[-1], activation="tanh", name='fc_4')(state_representation)
+
+fc_4 = tf.reshape(fc_4, [-1, 8, 8, 4] ) # go to shape of the latent space
 
 # Convolutional decoder
 dec_input = fc_4
 
+x = tf.keras.layers.Conv2DTranspose(8, [3, 3], strides=2, padding='same', name='deconv1')(dec_input)
 
+x = tf.keras.layers.LayerNormalization(name='norm_deconv1')(x)
+x = tf.keras.layers.Conv2DTranspose(16, [3, 3], strides=2, padding='same', name='deconv2')(x)
+x = tf.keras.layers.LayerNormalization(name='norm_deconv2')(x)
+transition_model_output = tf.keras.layers.Conv2DTranspose(1, [3, 3], strides=2, padding='same',
+                                                                  activation='sigmoid', name='deconv3')(x)
 #-----------------------------------------------------
-output = final_memory_state
-"""
+output = transition_model_output
+
 
 # Model creation
 model = tf.keras.Model(inputs=[transition_model_input, action_in],
