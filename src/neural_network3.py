@@ -42,19 +42,28 @@ class NeuralNetwork:
             tf.keras.layers.Dense(latent_space_shape[-1], activation="tanh", name='fc_1'))(action_in)
         fc_2 = tf.keras.layers.TimeDistributed(
             tf.keras.layers.Dense(latent_space_shape[-1], activation="tanh", name='fc_2'))(latent_space)
-        concat_1 = tf.concat([fc_1, fc_2], axis=1, name='concat_1')
+        concat_1 = tf.concat([fc_1, fc_2], axis=2, name='concat_1')
+
+
+
+
 
 
         # LSTM (option 1)
         my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
         my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True, return_state=True, name='rnn_layer')
-        _, h_state, c_state = my_RNN_layer(inputs=concat_1, initial_state=self.lstm_in)
+        _, h_state, c_state = my_RNN_layer(inputs=concat_1, initial_state=self.lstm_in )#initial_state=self.lstm_in
 
+        model_simple = tf.keras.Model(inputs=[transition_model_input, action_in],
+                                      outputs=[concat_1, h_state],  # last one is just an extra to print things for debuging
+                                      name="model_transition")
+
+
+        lstm_out_internal_c_h = (c_state, h_state)
         lstm_out_internal = h_state
         lstm_out_external = self.lstm_out
 
         final_memory_state = tf.cond(self.lstm_out_is_external == 1, lambda: lstm_out_external, lambda: lstm_out_internal)
-
 
         concat2_parte1 = final_memory_state[:, -150:]
         print('concat2_parte1')
@@ -62,6 +71,7 @@ class NeuralNetwork:
         concat2_parte2 = latent_space[:, -1, :]
         print('concat2_parte2')
         print(concat2_parte2)
+
 
         concat_2 = tf.concat([concat2_parte1, concat2_parte2], axis=1)
 
@@ -88,7 +98,7 @@ class NeuralNetwork:
 
 
         model_transition = tf.keras.Model(inputs=[transition_model_input, action_in],
-                                                        outputs=[state_representation, transition_model_output],
+                                                        outputs=[lstm_out_internal_c_h, state_representation, transition_model_output, concat_1], # last one is just an extra to print things for debuging
                                         name="model_transition")
         
 
@@ -101,7 +111,7 @@ class NeuralNetwork:
 
         #--------------------------------------------------------
 
-        return model_transition
+        return model_transition, model_simple
 
 
 

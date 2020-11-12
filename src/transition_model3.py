@@ -142,79 +142,81 @@ class TransitionModel:
             predictions = np.array(predictions)
 
             action_in = np.reshape(actions,
-                                   [self.transition_model_sampling_size * self.training_sequence_length, self.dim_a])
+                                   [self.transition_model_sampling_size, self.training_sequence_length, self.dim_a])
+
+            print('action_in')
+            print(action_in.shape)
 
             # action_in = np.reshape(actions,
             # [self.transition_model_sampling_size, self.training_sequence_length, self.dim_a])
 
             # Train transition model
 
+            lstm_in = [tf.cast(tf.reshape(tf.zeros(3000), [20, 150]), tf.float32),
+                       tf.cast(tf.reshape(tf.zeros(3000), [20, 150]), tf.float32)]
+
+            print('lstm_in')
+            print(lstm_in)
+
             input_to_encoder = np.reshape(observations,
-                                          [self.transition_model_sampling_size * self.training_sequence_length,
+                                          [self.transition_model_sampling_size,self.training_sequence_length,
                                            self.image_width, self.image_width, 1])
             # input_to_encoder = np.reshape(observations,
             # [self.transition_model_sampling_size, self.training_sequence_length,
             # self.image_width, self.image_width, 1])
             input_to_encoder = tf.convert_to_tensor(input_to_encoder, dtype=tf.float32)
             input_to_encoder_shape = tuple(input_to_encoder.get_shape().as_list())
-
+            print('input to encoder')
+            print(input_to_encoder_shape)
             action_in = tf.convert_to_tensor(action_in, dtype=tf.float32)
 
             neural_network.model_parameters(batch_size=self.transition_model_sampling_size,
-                                            sequence_length=self.training_sequence_length)
+                                            lstm_out_is_external=tf.constant(1),
+                                            lstm_in=lstm_in,
+                                            lstm_out=lstm_in)
 
-            if bandera2 == 1:
-                self.transition_model_training = neural_network.transition_model()
+            concat_1, h_state = self.model_simple([input_to_encoder, action_in])
 
+
+
+            print('h_state')
+            print(h_state)
+
+
+            print('concat_1')
+            print(concat_1)
+
+            tf.keras.utils.plot_model(self.model_simple,
+                                      to_file='model_simple_shapes.png',
+                                      show_shapes=True,
+                                      show_layer_names=True)
+            '''
+            
             # Print model summary, notice the shape of the input layer
             # self.transition_model_training.summary()
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
             transition_model_label = tf.convert_to_tensor(transition_model_label, dtype=tf.float32)
-            # save model as a png
-            tf.keras.utils.plot_model(self.transition_model_training, to_file='model_plot2.png', show_shapes=True,
-                                      show_layer_names=True)
 
             # TRAIN transition model
             optimizer_transition_model = tf.keras.optimizers.Adam(learning_rate=0.0005)  # irenee 0.0005 --> 0.005
-
+       
             with tf.GradientTape() as tape_transition:
 
-                final_memory_state, _, prediction_value = self.transition_model_training([input_to_encoder, action_in])
+                _, _, prediction_value, extra = self.transition_model([input_to_encoder, action_in])
+                print('extra')
+                print(extra)
                 # print(lstm_hidden_state_out_check)
 
                 current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
-                grads = tape_transition.gradient(current_loss, self.transition_model_training.trainable_variables)
+                grads = tape_transition.gradient(current_loss, self.transition_model.trainable_variables)
 
-            optimizer_transition_model.apply_gradients(zip(grads, self.transition_model_training.trainable_variables))
-            # self.conv1_weights = self.transition_model_training.get_layer('conv1').get_weights()
-            # print(whole_sequence)
-            # print(final_memory_state.shape)
-        # if bandera3 == 1:
-        # self.training_weights = self.transition_model_training.get_weights()
-        # print('PILLO WEIGHTSSS')
-        self.conv1_weights = self.transition_model_training.get_layer('conv1').get_weights()
-        self.norm_conv1_weights = self.transition_model_training.get_layer('norm_conv1').get_weights()
-        self.conv2_weights = self.transition_model_training.get_layer('conv2').get_weights()
-        self.norm_conv2_weights = self.transition_model_training.get_layer('norm_conv2').get_weights()
-        self.conv3_weights = self.transition_model_training.get_layer('conv3').get_weights()
+            optimizer_transition_model.apply_gradients(zip(grads, self.transition_model.trainable_variables))
 
-        self.fc_1_weights = self.transition_model_training.get_layer('fc_1').get_weights()
-        self.fc_2_weights = self.transition_model_training.get_layer('fc_2').get_weights()
-        self.rnn_layer_weights = self.transition_model_training.get_layer('rnn_layer').get_weights()
+            '''
 
-        self.fc_3_weights = self.transition_model_training.get_layer('fc_3').get_weights()
-        self.fc_4_weights = self.transition_model_training.get_layer('fc_4').get_weights()
-        self.deconv1_weights = self.transition_model_training.get_layer('deconv1').get_weights()
-        self.norm_deconv1_weights = self.transition_model_training.get_layer('norm_deconv1').get_weights()
-        self.deconv2_weights = self.transition_model_training.get_layer('deconv2').get_weights()
-        self.norm_deconv2_weights = self.transition_model_training.get_layer('norm_deconv2').get_weights()
-        self.deconv3_weights = self.transition_model_training.get_layer('deconv3').get_weights()
-        # weights = self.transition_model_training.dense1.get_weights()
 
-        # print('weight conv1 just after training')
-        # print(self.conv1_weights[0][0][0][0][0])
 
     def train(self, neural_network, t, done, database, i_episode):
         # print('TRANSITION-MODEL: train')
@@ -230,7 +232,7 @@ class TransitionModel:
 
         self._preprocess_observation(np.array(observation))
 
-        miaction_in = tf.ones([1, 1, 1], tf.float32)
+        dummy_action_in = tf.ones([1, 1, 1], tf.float32)
 
         self.lstm_hidden_state = [tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32),
                                   tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32)]
@@ -249,14 +251,14 @@ class TransitionModel:
                                         lstm_in = lstm_in)
 
         if i_episode == 0 and t == 0:
-            self.transition_model = neural_network.transition_model()
+            self.transition_model, self.model_simple = neural_network.transition_model()
 
 
 
         #self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
-        state_representation, ae_model_output = self.transition_model(
-            [reshaped_network_input, miaction_in])
+        _, state_representation, ae_model_output, extra = self.transition_model(
+            [reshaped_network_input, dummy_action_in])
 
            # [self.network_input[-1]])
         '''
@@ -362,18 +364,31 @@ class TransitionModel:
         # print('FUNCTION: def compute_lstm_hidden_state')
         action = np.reshape(action, [1, self.dim_a])
         self.action_tensor = tf.convert_to_tensor(action, dtype=tf.float32)
-        self.lstm_hidden_state_previous_time_step = self.lstm_hidden_state
-
-        h_state, c_state = tf.split(self.lstm_hidden_state_previous_time_step, 2, axis=1)
+        self.lstm_hidden_in = self.lstm_hidden_state
+        print('self.lstm_hidden_in')
+        print(self.lstm_hidden_in)
+        '''
+                h_state, c_state = tf.split(self.lstm_hidden_state_previous_time_step, 2, axis=1)
         h_state = tf.reshape(h_state, 150)
         c_state = tf.reshape(c_state, 150)
 
-        neural_network.model_parameters_compute_lstm(batch_size=tf.constant(1),
-                                                     sequence_length=tf.constant(1),
-                                                     h_state=h_state,
-                                                     c_state=c_state)
+        lstm_in = [h_state, c_state]
+        '''
 
-        if i_episode == 0 and t == 0:
+        self.dummy_lstm_out = self.lstm_hidden_in
+        neural_network.model_parameters(batch_size=tf.constant(1),
+                                                     lstm_out_is_external=tf.constant(0),
+                                                     lstm_in = self.lstm_hidden_in,
+        lstm_out = self.dummy_lstm_out
+        )
+
+#AQUI EL LSTM_OUT LO PONGO POR Q ME OBLIGA A PONER TODOS LOS ARGUMENTOS. QUIZA SI LES DOY KEYWORDS..
+
+
+
+
+        '''
+                if i_episode == 0 and t == 0:
             self.model_compute_lstm_hidden_state = neural_network.compute_lstm_model()
             # print('CREO MODELO PREDICTINGG')
 
@@ -388,13 +403,16 @@ class TransitionModel:
             self.model_compute_lstm_hidden_state.get_layer('fc_2').set_weights(self.fc_2_weights)
             self.model_compute_lstm_hidden_state.get_layer('rnn_layer').set_weights(self.rnn_layer_weights)
 
+        '''
+        reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
         # self.lstm_hidden_state = self.model_compute_lstm_hidden_state([self.network_input[-1], self.action_tensor, self.lstm_hidden_state_previous_time_step])
-        self.lstm_hidden_state = self.model_compute_lstm_hidden_state(
-            [self.network_input[-1], self.action_tensor])
+        self.lstm_hidden_state,_ ,_, extra= self.transition_model(
+            [reshaped_network_input, self.action_tensor])
+
 
         self.last_actions.add(action)
 
-        self.conv1_weights_lstm = self.model_compute_lstm_hidden_state.get_layer('conv1').get_weights()
+        #self.conv1_weights_lstm = self.model_compute_lstm_hidden_state.get_layer('conv1').get_weights()
         # print('weight conv1 lstm')
         # print(self.conv1_weights_lstm[0][0][0][0][0])
 
