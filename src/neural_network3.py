@@ -19,10 +19,10 @@ class NeuralNetwork:
 
 
 
-    def get_state_representation_model(self):
+    def transition_model(self):
         transition_model_input = tf.keras.layers.Input(shape=(None, self.image_width, self.image_width, 1))
-
-        LSTM_input = tf.keras.Input(shape=(None, 150))
+        action_in = tf.keras.layers.Input(shape=(None, 1))
+        #LSTM_input = tf.keras.Input(shape=(None, 150))
         # Convolutional encoder
         conv1_layer = tf.keras.layers.Conv2D(16, (3, 3), strides=2, padding='same', name='conv1')
         conv2_layer = tf.keras.layers.Conv2D(8, [3, 3], strides=2, padding='same', name='conv2')
@@ -38,12 +38,23 @@ class NeuralNetwork:
 
         latent_space_shape = latent_space.get_shape()
 
+        fc_1 = tf.keras.layers.TimeDistributed(
+            tf.keras.layers.Dense(latent_space_shape[-1], activation="tanh", name='fc_1'))(action_in)
+        fc_2 = tf.keras.layers.TimeDistributed(
+            tf.keras.layers.Dense(latent_space_shape[-1], activation="tanh", name='fc_2'))(latent_space)
+        concat_1 = tf.concat([fc_1, fc_2], axis=1, name='concat_1')
 
 
-        lstm_out_external = tf.cast(tf.reshape(tf.zeros(150), [-1, 150]), tf.float32)
+        # LSTM (option 1)
+        my_LSTMCell = tf.keras.layers.LSTMCell(self.lstm_hidden_state_size)
+        my_RNN_layer = tf.keras.layers.RNN(my_LSTMCell, return_sequences=True, return_state=True, name='rnn_layer')
+        _, h_state, c_state = my_RNN_layer(inputs=concat_1, initial_state=self.lstm_in)
 
+        lstm_out_internal = h_state
+        lstm_out_external = self.lstm_out
 
-        final_memory_state = lstm_out_external
+        final_memory_state = tf.cond(self.lstm_out_is_external == 1, lambda: lstm_out_external, lambda: lstm_out_internal)
+
 
         concat2_parte1 = final_memory_state[:, -150:]
         print('concat2_parte1')
@@ -76,21 +87,21 @@ class NeuralNetwork:
 
 
 
-        model_get_state_representation = tf.keras.Model(inputs=[transition_model_input],
+        model_transition = tf.keras.Model(inputs=[transition_model_input, action_in],
                                                         outputs=[state_representation, transition_model_output],
-                                        name="model_get_state_representation")
+                                        name="model_transition")
         
 
 
 
-        tf.keras.utils.plot_model(model_get_state_representation ,
-                                  to_file='model_get_state_representation .png',
+        tf.keras.utils.plot_model(model_transition ,
+                                  to_file='model_transition.png',
                                   show_shapes=True,
                                   show_layer_names=True)
 
         #--------------------------------------------------------
 
-        return model_get_state_representation
+        return model_transition
 
 
 

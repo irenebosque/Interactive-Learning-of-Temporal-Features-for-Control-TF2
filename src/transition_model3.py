@@ -230,7 +230,7 @@ class TransitionModel:
 
         self._preprocess_observation(np.array(observation))
 
-        action_in = tf.ones([1, 1, 1], tf.float32)
+        miaction_in = tf.ones([1, 1, 1], tf.float32)
 
         self.lstm_hidden_state = [tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32),
                                   tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32)]
@@ -239,20 +239,24 @@ class TransitionModel:
 
         reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
 
+        # lstm_out_external = tf.cast(tf.reshape(tf.zeros(150), [-1, 150]), tf.float32)
+
+        lstm_hidden_state_only_h = self.lstm_hidden_state[1]
+
         neural_network.model_parameters(batch_size=tf.constant(1),
                                         lstm_out_is_external = 1,
-                                        lstm_out = self.lstm_hidden_state,
+                                        lstm_out = lstm_hidden_state_only_h,
                                         lstm_in = lstm_in)
 
         if i_episode == 0 and t == 0:
-            self.transition_model_predicting = neural_network.get_state_representation_model()
+            self.transition_model = neural_network.transition_model()
 
 
 
         #self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
-        state_representation, ae_model_output = self.transition_model_predicting(
-            [reshaped_network_input])
+        state_representation, ae_model_output = self.transition_model(
+            [reshaped_network_input, miaction_in])
 
            # [self.network_input[-1]])
         '''
