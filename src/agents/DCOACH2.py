@@ -47,16 +47,18 @@ class DCOACH:
         optimizer_policy_model = tf.keras.optimizers.SGD(learning_rate=0.003)
 
         with tf.GradientTape() as tape_policy:
-
+            #print('state_representation.shape')
+            #print(state_representation.shape)
             policy_output = self.policy_model([state_representation])
 
             policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - policy_label))
             grads = tape_policy.gradient(policy_loss, self.policy_model.trainable_variables)
 
-        optimizer_policy_model .apply_gradients(zip(grads, self.policy_model.trainable_variables))
+        optimizer_policy_model.apply_gradients(zip(grads, self.policy_model.trainable_variables))
 
-
-
+        self.fc_7_weights = self.policy_model.get_layer('fc_7').get_weights()
+        #print('self.fc_7_weights')
+        #print(self.fc_7_weights[-1])
 
     def _batch_update(self, neural_network, transition_model, batch, i_episode, t):
         observation_sequence_batch = [np.array(pair[0]) for pair in batch]  # state(t) sequence
@@ -64,10 +66,18 @@ class DCOACH:
         current_observation_batch = [np.array(pair[2]) for pair in batch]  # last
         action_label_batch = [np.array(pair[3]) for pair in batch]
 
-        state_representation_batch = transition_model.get_state_representation_batch(neural_network, observation_sequence_batch, action_sequence_batch, current_observation_batch, self.buffer.length(), i_episode, t)
+        batch_size = len(observation_sequence_batch)
+
+        lstm_hidden_state_batch = transition_model.get_lstm_hidden_state_batch(neural_network,
+                                                                                     observation_sequence_batch,
+                                                                                     action_sequence_batch, batch_size)
+
+        state_representation_batch = transition_model.get_state_representation_batch(neural_network, current_observation_batch, lstm_hidden_state_batch, batch_size)
+
+        #state_representation_batch = transition_model.get_state_representation_batch(neural_network, observation_sequence_batch, action_sequence_batch, current_observation_batch, self.buffer.length(), i_episode, t)
 
         self._single_update(neural_network, state_representation_batch, action_label_batch)
-
+        #print('agent batchhhhh')
 
 
     def feed_h(self, h):
@@ -82,6 +92,7 @@ class DCOACH:
 
 
         action = self.policy_model([self.state_representation])
+
         action = action.numpy()
 
 
@@ -98,10 +109,12 @@ class DCOACH:
 
     def train(self, neural_network, transition_model, action, t, done, i_episode):
         self._generate_policy_label(action)
-
+        #print('train agent')
         # Policy training
         if np.any(self.h):  # if any element is not 0
+
             self._single_update(neural_network, self.state_representation, self.policy_action_label)
+            print('agent single update')
             print("feedback:", self.h)
 
             # Add last step to memory buffer
@@ -110,12 +123,13 @@ class DCOACH:
 
             # Train sampling from buffer
             if self.buffer.initialized():
-                print("buffer.length():", self.buffer.length())
+                print('Train sampling from buffer')
 
                 batch = self.buffer.sample(batch_size=self.buffer_sampling_size)  # TODO: probably this config thing should not be here
                 self._batch_update(neural_network, transition_model, batch, i_episode, t)
 
         # Train policy every k time steps from buffer
         if self.buffer.initialized() and t % self.buffer_sampling_rate == 0 or (self.train_end_episode and done):
+            print('Train policy every k time steps from buffer')
             batch = self.buffer.sample(batch_size=self.buffer_sampling_size)
             self._batch_update(neural_network, transition_model, batch, i_episode, t)

@@ -25,7 +25,8 @@ class TransitionModel:
         #self.lstm_hidden_state = np.zeros([1, 2 * self.lstm_h_size])
 
         #self.lstm_hidden_state = [tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32), tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32)]
-
+        self.lstm_hidden_state_h = tf.cast(tf.zeros([1, 150]), tf.float32)
+        self.lstm_hidden_state_c = tf.cast(tf.zeros([1, 150]), tf.float32)
 
         self.image_width = image_width  # we assume that images are squares
 
@@ -152,11 +153,18 @@ class TransitionModel:
 
             # Train transition model
 
-            lstm_in = [tf.cast(tf.reshape(tf.zeros(3000), [20, 150]), tf.float32),
-                       tf.cast(tf.reshape(tf.zeros(3000), [20, 150]), tf.float32)]
+            #lstm_in2 = [tf.cast(tf.reshape(tf.zeros(3000), [20, 150]), tf.float32),
+                       #tf.cast(tf.reshape(tf.zeros(3000), [20, 150]), tf.float32)]
 
-            print('lstm_in')
-            print(lstm_in)
+            #print('lstm_in2')
+            #print(lstm_in2)
+            #print(np.shape(lstm_in2))
+
+            #parte = tf.cast(tf.reshape(tf.zeros(150), [1, 150]), tf.float32)
+            #lstm_in = [parte, parte]
+            #print('lstm_in')
+            #print(lstm_in)
+            #print(np.shape(lstm_in))
 
             input_to_encoder = np.reshape(observations,
                                           [self.transition_model_sampling_size,self.training_sequence_length,
@@ -164,33 +172,55 @@ class TransitionModel:
             # input_to_encoder = np.reshape(observations,
             # [self.transition_model_sampling_size, self.training_sequence_length,
             # self.image_width, self.image_width, 1])
-            input_to_encoder = tf.convert_to_tensor(input_to_encoder, dtype=tf.float32)
-            input_to_encoder_shape = tuple(input_to_encoder.get_shape().as_list())
-            print('input to encoder')
-            print(input_to_encoder_shape)
+            #input_to_encoder = tf.convert_to_tensor(input_to_encoder, dtype=tf.float32)
+            #input_to_encoder_shape = tuple(input_to_encoder.get_shape().as_list())
+            #print('input to encoder')
+            #print(input_to_encoder_shape)
             action_in = tf.convert_to_tensor(action_in, dtype=tf.float32)
 
-            neural_network.model_parameters(batch_size=self.transition_model_sampling_size,
-                                            lstm_out_is_external=tf.constant(1),
-                                            lstm_in=lstm_in,
-                                            lstm_out=lstm_in)
+            neural_network.model_parameters(lstm_out_is_external=tf.constant(0))
+            '''
+               if i_episode == 0 and t == 0:
+                self.transition_model_batch_20, self.model_simple_batch_20 = neural_network.transition_model()
+                print('modelo creado')
+            '''
+            lstm_hidden_state_h_in = tf.cast(tf.zeros([20, 150]), tf.float32)
+            lstm_hidden_state_c_in = tf.cast(tf.zeros([20, 150]), tf.float32)
+            dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([20, 150]), tf.float32)
+            dummy_lstm_hidden_state_c_out = tf.cast(tf.zeros([20, 150]), tf.float32)
+            #lstm_in = self.model_simple([input_to_encoder, action_in])
+            '''
+            _, _, _, _,_,_= self.transition_model(
+                [input_to_encoder, action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+                 dummy_lstm_hidden_state_h_out,
+                 dummy_lstm_hidden_state_c_out])
+            
+            '''
 
-            concat_1, h_state = self.model_simple([input_to_encoder, action_in])
 
-
+            '''
+            print('concat_1')
+            #print(concat_1)
+            # converting list to array
+            arr = np.array(concat_1)
+            print(arr.shape)
 
             print('h_state')
-            print(h_state)
+            #print(h_state)
+            # converting list to array
+            arr = np.array(h_state)
+            print(arr.shape)
 
-
-            print('concat_1')
-            print(concat_1)
-
-            tf.keras.utils.plot_model(self.model_simple,
-                                      to_file='model_simple_shapes.png',
-                                      show_shapes=True,
-                                      show_layer_names=True)
+            print('lstm_in')
+            #print(lstm_in)
+            # converting list to array
+            arr = np.array(lstm_in)
+            print(arr.shape)
             '''
+
+
+
+
             
             # Print model summary, notice the shape of the input layer
             # self.transition_model_training.summary()
@@ -204,9 +234,10 @@ class TransitionModel:
        
             with tf.GradientTape() as tape_transition:
 
-                _, _, prediction_value, extra = self.transition_model([input_to_encoder, action_in])
-                print('extra')
-                print(extra)
+                _, _, _, _, _, prediction_value = self.transition_model(
+                    [input_to_encoder, action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+                     dummy_lstm_hidden_state_h_out,
+                     dummy_lstm_hidden_state_c_out])
                 # print(lstm_hidden_state_out_check)
 
                 current_loss = tf.reduce_mean(tf.square(prediction_value - transition_model_label))
@@ -214,7 +245,7 @@ class TransitionModel:
 
             optimizer_transition_model.apply_gradients(zip(grads, self.transition_model.trainable_variables))
 
-            '''
+
 
 
 
@@ -228,50 +259,70 @@ class TransitionModel:
             self._train_model_from_database(neural_network, database, i_episode, t)
 
     def get_state_representation(self, neural_network, observation, i_episode, t):
-
+        #print('def get_state_representation')
 
         self._preprocess_observation(np.array(observation))
 
-        dummy_action_in = tf.ones([1, 1, 1], tf.float32)
 
-        self.lstm_hidden_state = [tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32),
+        # inicializacion del lstm_hidden_state
+        '''
+         self.lstm_hidden_state = [tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32),
                                   tf.cast(tf.reshape(tf.zeros(self.lstm_h_size), [1, self.lstm_h_size]), tf.float32)]
 
-        lstm_in = [tf.cast(tf.reshape(tf.zeros(150), [-1, 150]), tf.float32), tf.cast(tf.reshape(tf.zeros(150), [-1, 150]), tf.float32)]
+        
+        '''
 
-        reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
+        #lstm_in = [tf.cast(tf.reshape(tf.zeros(150), [1, 150]), tf.float32), tf.cast(tf.reshape(tf.zeros(150), [1, 150]), tf.float32)]
+        #part_lstm_initial = tf.ones([1, 1, 150], tf.float32)
+        #print('lstm_in')
 
+        #print(lstm_in)
+        #print(dummy_action_in)
         # lstm_out_external = tf.cast(tf.reshape(tf.zeros(150), [-1, 150]), tf.float32)
+        #lstm_hidden_state_only_h = self.lstm_hidden_state[1]
 
-        lstm_hidden_state_only_h = self.lstm_hidden_state[1]
-
+        '''
         neural_network.model_parameters(batch_size=tf.constant(1),
                                         lstm_out_is_external = 1,
                                         lstm_out = lstm_hidden_state_only_h,
-                                        lstm_in = lstm_in)
+                                        lstm_in = lstm_in,
+                                        tt = tf.constant(t))
+        '''
+
+
+        neural_network.model_parameters(lstm_out_is_external = 1)
 
         if i_episode == 0 and t == 0:
             self.transition_model, self.model_simple = neural_network.transition_model()
 
+        dummy_action_in = tf.ones([1, 1, 1], tf.float32)
+        reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
 
+        dummy_lstm_hidden_state_h_in = tf.cast(tf.zeros([1, 150]), tf.float32)
+        dummy_lstm_hidden_state_c_in = tf.cast(tf.zeros([1, 150]), tf.float32)
+        lstm_hidden_state_h_out = self.lstm_hidden_state_h
+        #print('lstm_hidden_state_h_out')
+        #print(lstm_hidden_state_h_out)
+        #print('self.lstm_hidden_state_h')
+        #print(self.lstm_hidden_state_h)
 
+        lstm_hidden_state_c_out = self.lstm_hidden_state_c
         #self.lstm_hidden_state_tensor = tf.convert_to_tensor(self.lstm_hidden_state, dtype=tf.float32)
 
-        _, state_representation, ae_model_output, extra = self.transition_model(
-            [reshaped_network_input, dummy_action_in])
+        #lstm_in_variable = self.model_simple([reshaped_network_input, dummy_action_in, part_lstm_initial])
+        #print('initial stated created with variable batch sizeee')
+        #print(lstm_in_variable)
+        action_in,latent_space,_,_, state_representation, ae_model_output = self.transition_model(
+            [reshaped_network_input, dummy_action_in, dummy_lstm_hidden_state_h_in,dummy_lstm_hidden_state_c_in, lstm_hidden_state_h_out,lstm_hidden_state_c_out])
 
+        #print('action_in')
+        #print(action_in.shape)
+        #print('latent_space')
+        #print(latent_space.shape)
            # [self.network_input[-1]])
-        '''
-        print('concat2_parte2')
-        print(concat2_parte2)
-        print('concat_2')
-        print(concat_2)
-        print('x1')
-        print(x1)
-        print('olii')
-        print('self.network_input[-1]')
-        print(self.network_input[-1])
-        '''
+
+
+
 
         self._refresh_image_plots(ae_model_output)  # refresh image plots
         self.t_counter += 1
@@ -279,94 +330,282 @@ class TransitionModel:
 
 
         return state_representation
-
+    '''
     def get_state_representation_batch(self, neural_network, observation_sequence_batch, action_sequence_batch,
                                        current_observation, buffer_length, i_episode, t):
 
         batch_size = len(observation_sequence_batch)
         # print('batch sizeee')
         # print(batch_size)
+        neural_network.model_parameters(lstm_out_is_external = 0)
 
-        if buffer_length == 20:
-            # LSTM_HIDDEN_STATE_BATCH model
-            neural_network.model_parameters(batch_size=batch_size,
-                                            sequence_length=self.training_sequence_length)
-            self.model_lstm_hidden_state_batch = neural_network.transition_model()
+        
 
-            print('Minimum buffer_length reached, Model "model_lstm_hidden_state_batch" created, give more feedback')
 
-            # STATE REPRESENTATION BATCH model
-            neural_network.model_parameters(batch_size=batch_size,
-                                            sequence_length=tf.constant(1))
-            self.model_state_representation_batch = neural_network.predicting_model()
-
-            print('Minimum buffer_length reached, Model "model_state_representation_batch" created, give more feedback')
 
         # LSTM_HIDDEN_STATE_BATCH
-        if i_episode != 0:
-            self.model_lstm_hidden_state_batch.get_layer('conv1').set_weights(self.conv1_weights)
-            self.model_lstm_hidden_state_batch.get_layer('norm_conv1').set_weights(self.norm_conv1_weights)
-            self.model_lstm_hidden_state_batch.get_layer('conv2').set_weights(self.conv2_weights)
-            self.model_lstm_hidden_state_batch.get_layer('norm_conv2').set_weights(self.norm_conv2_weights)
-            self.model_lstm_hidden_state_batch.get_layer('conv3').set_weights(self.conv3_weights)
-
-            self.model_lstm_hidden_state_batch.get_layer('fc_1').set_weights(self.fc_1_weights)
-            self.model_lstm_hidden_state_batch.get_layer('fc_2').set_weights(self.fc_2_weights)
-            self.model_lstm_hidden_state_batch.get_layer('rnn_layer').set_weights(self.rnn_layer_weights)
 
         transition_model_input = tf.convert_to_tensor(np.reshape(observation_sequence_batch,
-                                                                 [batch_size * self.training_sequence_length,
+                                                                 [batch_size,self.training_sequence_length,
                                                                   self.image_width, self.image_width, 1]),
                                                       dtype=tf.float32)
         action_in = tf.convert_to_tensor(
-            np.reshape(action_sequence_batch, [batch_size * self.training_sequence_length, self.dim_a]),
+            np.reshape(action_sequence_batch, [batch_size, self.training_sequence_length, self.dim_a]),
             dtype=tf.float32)
 
-        lstm_hidden_state_batch, _, _ = self.model_lstm_hidden_state_batch([transition_model_input, action_in])
+        print('action_in_batch')
+        print(action_in)
 
-        # FALTA COPIAR LOS WEIGHTS! como es el mismo modelo que el usado en el compute lstm hidden state, no ha hecho falta
-        # definirlo dos veces en el fichero neural network, sino que haces otra duplica que admitira un batch size differente
+        lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        dummy_lstm_hidden_state_c_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
 
-        # STATE REPRESENTATION BATCH
-        if i_episode != 0:
-            self.model_state_representation_batch.get_layer('conv1').set_weights(self.conv1_weights)
-            self.model_state_representation_batch.get_layer('norm_conv1').set_weights(self.norm_conv1_weights)
-            self.model_state_representation_batch.get_layer('conv2').set_weights(self.conv2_weights)
-            self.model_state_representation_batch.get_layer('norm_conv2').set_weights(self.norm_conv2_weights)
-            self.model_state_representation_batch.get_layer('conv3').set_weights(self.conv3_weights)
+        action_in, latent_space, lstm_hidden_state_h_batch, lstm_hidden_state_c_batch, _, _ = self.transition_model(
+            [transition_model_input, action_in, lstm_hidden_state_h_in,lstm_hidden_state_c_in, dummy_lstm_hidden_state_h_out,
+             dummy_lstm_hidden_state_c_out])
 
-            self.model_state_representation_batch.get_layer('fc_3').set_weights(self.fc_3_weights)
-            self.model_state_representation_batch.get_layer('fc_4').set_weights(self.fc_4_weights)
+        #print('lstm_hidden_state_h_batch')
 
-            self.model_state_representation_batch.get_layer('deconv1').set_weights(self.deconv1_weights)
-            self.model_state_representation_batch.get_layer('norm_deconv1').set_weights(self.norm_deconv1_weights)
-            self.model_state_representation_batch.get_layer('deconv2').set_weights(self.deconv2_weights)
-            self.model_state_representation_batch.get_layer('norm_deconv2').set_weights(self.norm_deconv2_weights)
-            self.model_state_representation_batch.get_layer('deconv3').set_weights(self.deconv3_weights)
+        #print(lstm_hidden_state_h_batch)
+        print('action_in')
+        print(action_in.shape)
+        print('latent_space')
+        print(latent_space.shape)
 
-        transition_model_input = tf.convert_to_tensor(
-            np.reshape(current_observation, [batch_size, self.image_width, self.image_width, 1]), dtype=tf.float32)
+        neural_network.model_parameters(lstm_out_is_external=1)
 
-        state_representation_batch, _ = self.model_state_representation_batch(
-            [transition_model_input, lstm_hidden_state_batch])
+        transition_model_input2 = tf.convert_to_tensor(
+            np.reshape(current_observation, [batch_size,1, self.image_width, self.image_width, 1]), dtype=tf.float32)
 
-        self.conv1_weights_lstm_batch = self.model_lstm_hidden_state_batch.get_layer('conv1').get_weights()
+        print('transition_model_input2')
+        print(transition_model_input2)
+
+        lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_h_out = lstm_hidden_state_h_batch
+        lstm_hidden_state_c_out = lstm_hidden_state_c_batch
+        dummy_action_in = tf.ones([batch_size, 1, 1], tf.float32)
+
+        print('BATCH MODEL SIMPLE')
+        actionin, latentspace= self.model_simple(
+            [transition_model_input2, dummy_action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in, lstm_hidden_state_h_out,
+             lstm_hidden_state_c_out])
+
+        print('actionin_batch_state_REPRE')
+        print(actionin.shape)
+        print('latentspace_batch_state_REPRE')
+        print(latentspace.shape)
+
+
+
+
+
+
+
+
+
+
+        actionin, latentspace, _, _, state_representation_batch, _ = self.transition_model([transition_model_input, dummy_action_in, lstm_hidden_state_h_in,lstm_hidden_state_c_in, lstm_hidden_state_h_out,lstm_hidden_state_c_out])
+        print('actionin_batch_state_REPRE')
+        print(actionin.shape)
+        print('latentspace_batch_state_REPRE')
+        print(latentspace.shape)
+        #self.conv1_weights_lstm_batch = self.model_lstm_hidden_state_batch.get_layer('conv1').get_weights()
         # print('weight conv1 lstm batch')
         # print(self.conv1_weights_lstm_batch[0][0][0][0][0])
 
-        self.conv1_weights_state_batch = self.model_state_representation_batch.get_layer('conv1').get_weights()
+        #self.conv1_weights_state_batch = self.model_state_representation_batch.get_layer('conv1').get_weights()
+        # print('weight conv1 state batch')
+        # print(self.conv1_weights_state_batch[0][0][0][0][0])
+
+        return state_representation_batch
+    
+    '''
+    '''
+    def get_state_representation_batch(self, neural_network, observation_sequence_batch, action_sequence_batch,
+                                       current_observation, buffer_length, i_episode, t):
+
+        batch_size = len(observation_sequence_batch)
+        # print('batch sizeee')
+        # print(batch_size)
+        neural_network.model_parameters(lstm_out_is_external=0)
+
+        # LSTM_HIDDEN_STATE_BATCH
+
+        transition_model_input = tf.convert_to_tensor(np.reshape(observation_sequence_batch,
+                                                                 [batch_size, self.training_sequence_length,
+                                                                  self.image_width, self.image_width, 1]),
+                                                      dtype=tf.float32)
+        action_in = tf.convert_to_tensor(
+            np.reshape(action_sequence_batch, [batch_size, self.training_sequence_length, self.dim_a]),
+            dtype=tf.float32)
+
+        print('action_in_batch')
+        print(action_in)
+
+        lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        dummy_lstm_hidden_state_c_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+
+        action_in, latent_space, lstm_hidden_state_h_batch, lstm_hidden_state_c_batch, _, _ = self.transition_model(
+            [transition_model_input, action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+             dummy_lstm_hidden_state_h_out,
+             dummy_lstm_hidden_state_c_out])
+
+        # print('lstm_hidden_state_h_batch')
+
+        # print(lstm_hidden_state_h_batch)
+        print('action_in')
+        print(action_in.shape)
+        print('latent_space')
+        print(latent_space.shape)
+
+        neural_network.model_parameters(lstm_out_is_external=1)
+
+        transition_model_input2 = tf.convert_to_tensor(
+            np.reshape(current_observation, [batch_size, 1, self.image_width, self.image_width, 1]), dtype=tf.float32)
+
+        print('transition_model_input2')
+        print(transition_model_input2)
+
+        lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_h_out = lstm_hidden_state_h_batch
+        lstm_hidden_state_c_out = lstm_hidden_state_c_batch
+        dummy_action_in = tf.ones([batch_size, 1, 1], tf.float32)
+
+        print('BATCH MODEL SIMPLE')
+        actionin, latentspace = self.model_simple(
+            [transition_model_input2, dummy_action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+             lstm_hidden_state_h_out,
+             lstm_hidden_state_c_out])
+
+        print('actionin_batch_state_REPRE')
+        print(actionin.shape)
+        print('latentspace_batch_state_REPRE')
+        print(latentspace.shape)
+
+        actionin, latentspace, _, _, state_representation_batch, _ = self.transition_model(
+            [transition_model_input, dummy_action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+             lstm_hidden_state_h_out, lstm_hidden_state_c_out])
+        print('actionin_batch_state_REPRE')
+        print(actionin.shape)
+        print('latentspace_batch_state_REPRE')
+        print(latentspace.shape)
+        # self.conv1_weights_lstm_batch = self.model_lstm_hidden_state_batch.get_layer('conv1').get_weights()
+        # print('weight conv1 lstm batch')
+        # print(self.conv1_weights_lstm_batch[0][0][0][0][0])
+
+        # self.conv1_weights_state_batch = self.model_state_representation_batch.get_layer('conv1').get_weights()
+        # print('weight conv1 state batch')
+        # print(self.conv1_weights_state_batch[0][0][0][0][0])
+
+        return state_representation_batch
+    '''
+    def get_lstm_hidden_state_batch(self, neural_network, observation_sequence_batch, action_sequence_batch, batch_size):
+
+
+        transition_model_input = tf.convert_to_tensor(np.reshape(observation_sequence_batch,
+                                                                 [batch_size, self.training_sequence_length,
+                                                                  self.image_width, self.image_width, 1]),
+                                                      dtype=tf.float32)
+        action_in = tf.convert_to_tensor(
+            np.reshape(action_sequence_batch, [batch_size, self.training_sequence_length, self.dim_a]),
+            dtype=tf.float32)
+
+        neural_network.model_parameters(lstm_out_is_external=0)
+
+        # LSTM_HIDDEN_STATE_BATCH
+
+
+
+
+        #print('action_in_batch')
+        #print(action_in)
+
+        lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        dummy_lstm_hidden_state_c_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+
+        action_in, latent_space, lstm_hidden_state_h_batch, lstm_hidden_state_c_batch, _, _ = self.transition_model(
+            [transition_model_input, action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+             dummy_lstm_hidden_state_h_out,
+             dummy_lstm_hidden_state_c_out])
+
+        # print('lstm_hidden_state_h_batch')
+
+        # print(lstm_hidden_state_h_batch)
+        #print('action_in')
+        #print(action_in.shape)
+        #print('latent_space')
+        #print(latent_space.shape)
+
+
+        return [lstm_hidden_state_h_batch, lstm_hidden_state_c_batch]
+
+    def get_state_representation_batch(self, neural_network, current_observation, lstm_hidden_state_batch, batch_size):
+
+
+
+        neural_network.model_parameters(lstm_out_is_external=1)
+
+        transition_model_input2 = tf.convert_to_tensor(
+            np.reshape(current_observation, [batch_size, 1, self.image_width, self.image_width, 1]), dtype=tf.float32)
+
+        #print('transition_model_input2')
+        #print(transition_model_input2)
+
+        lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
+        lstm_hidden_state_h_out = lstm_hidden_state_batch[0]
+        lstm_hidden_state_c_out = lstm_hidden_state_batch[1]
+        dummy_action_in = tf.ones([batch_size, 1, 1], tf.float32)
+
+        #print('BATCH MODEL SIMPLE')
+        actionin, latentspace = self.model_simple(
+            [transition_model_input2, dummy_action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+             lstm_hidden_state_h_out,
+             lstm_hidden_state_c_out])
+
+        #print('actionin_batch_state_REPRE')
+        #print(actionin.shape)
+        #print('latentspace_batch_state_REPRE')
+        #print(latentspace.shape)
+
+        actionin, latentspace, _, _, state_representation_batch, _ = self.transition_model(
+            [transition_model_input2, dummy_action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+             lstm_hidden_state_h_out, lstm_hidden_state_c_out])
+        #print('actionin_batch_state_REPRE')
+        #print(actionin.shape)
+        #print('latentspace_batch_state_REPRE')
+        #print(latentspace.shape)
+        # self.conv1_weights_lstm_batch = self.model_lstm_hidden_state_batch.get_layer('conv1').get_weights()
+        # print('weight conv1 lstm batch')
+        # print(self.conv1_weights_lstm_batch[0][0][0][0][0])
+
+        # self.conv1_weights_state_batch = self.model_state_representation_batch.get_layer('conv1').get_weights()
         # print('weight conv1 state batch')
         # print(self.conv1_weights_state_batch[0][0][0][0][0])
 
         return state_representation_batch
 
+
     def compute_lstm_hidden_state(self, neural_network, action, i_episode, t):
+        #print('def compute_lstm_hidden_state')
         # print('FUNCTION: def compute_lstm_hidden_state')
         action = np.reshape(action, [1, self.dim_a])
-        self.action_tensor = tf.convert_to_tensor(action, dtype=tf.float32)
-        self.lstm_hidden_in = self.lstm_hidden_state
-        print('self.lstm_hidden_in')
-        print(self.lstm_hidden_in)
+        #self.action_tensor = tf.convert_to_tensor(action, dtype=tf.float32)
+
+        reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
+
+        #self.lstm_hidden_in = self.lstm_hidden_state
+        #print('self.lstm_hidden_in')
+        #print(self.lstm_hidden_in)
+        #arr = np.array(self.lstm_hidden_in)
+        #print(arr.shape)
         '''
                 h_state, c_state = tf.split(self.lstm_hidden_state_previous_time_step, 2, axis=1)
         h_state = tf.reshape(h_state, 150)
@@ -375,12 +614,10 @@ class TransitionModel:
         lstm_in = [h_state, c_state]
         '''
 
-        self.dummy_lstm_out = self.lstm_hidden_in
-        neural_network.model_parameters(batch_size=tf.constant(1),
-                                                     lstm_out_is_external=tf.constant(0),
-                                                     lstm_in = self.lstm_hidden_in,
-        lstm_out = self.dummy_lstm_out
-        )
+        #self.dummy_lstm_out = self.lstm_hidden_in
+        neural_network.model_parameters(lstm_out_is_external=tf.constant(0))
+
+
 
 #AQUI EL LSTM_OUT LO PONGO POR Q ME OBLIGA A PONER TODOS LOS ARGUMENTOS. QUIZA SI LES DOY KEYWORDS..
 
@@ -404,10 +641,30 @@ class TransitionModel:
             self.model_compute_lstm_hidden_state.get_layer('rnn_layer').set_weights(self.rnn_layer_weights)
 
         '''
-        reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
+
         # self.lstm_hidden_state = self.model_compute_lstm_hidden_state([self.network_input[-1], self.action_tensor, self.lstm_hidden_state_previous_time_step])
-        self.lstm_hidden_state,_ ,_, extra= self.transition_model(
+
+        '''
+                self.lstm_hidden_state,_ ,_, extra= self.transition_model(
             [reshaped_network_input, self.action_tensor])
+        
+        '''
+        lstm_hidden_state_h_in = self.lstm_hidden_state_h
+        lstm_hidden_state_c_in = self.lstm_hidden_state_c
+        dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([1, 150]), tf.float32)
+        dummy_lstm_hidden_state_c_out = tf.cast(tf.zeros([1, 150]), tf.float32)
+
+        _,_,self.lstm_hidden_state_h, self.lstm_hidden_state_c, _, _ = self.transition_model(
+            [reshaped_network_input, action, lstm_hidden_state_h_in,lstm_hidden_state_c_in, dummy_lstm_hidden_state_h_out,
+             dummy_lstm_hidden_state_c_out])
+
+        '''
+                self.lstm_hidden_state_h = tf.reshape(lstm_hidden_state_h, [1,150])
+        self.lstm_hidden_state_c = tf.reshape(lstm_hidden_state_c, [1, 150])
+         '''
+        #print('self.lstm_hidden_state_h_salida del compute lstm')
+        #print(self.lstm_hidden_state_h)
+
 
 
         self.last_actions.add(action)
