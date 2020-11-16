@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from main_init3 import neural_network, transition_model, transition_model_type, agent, agent_type, exp_num,count_down, \
+from main_init2 import neural_network, transition_model, transition_model_type, agent, agent_type, exp_num,count_down, \
     max_num_of_episodes, env, render, max_time_steps_episode, human_feedback, save_results, eval_save_path, \
     render_delay, save_policy, save_transition_model
 
@@ -72,7 +72,7 @@ for i_episode in range(max_num_of_episodes):
         done = human_feedback.ask_for_done() or environment_done
 
         # Compute new hidden state of LSTM
-        transition_model.compute_lstm_hidden_state(neural_network, action, i_episode, t)
+        transition_model.compute_lstm_hidden_state(neural_network, action)
 
         # Append transition to database
         if not evaluation:

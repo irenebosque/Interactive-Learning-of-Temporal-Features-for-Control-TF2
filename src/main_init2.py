@@ -5,8 +5,8 @@ import argparse
 #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # switch to CPU
 from buffer2 import Buffer
 from agents.selector2 import agent_selector
-from transition_model3 import TransitionModel
-from neural_network3 import NeuralNetwork
+from transition_model2 import TransitionModel
+from neural_network2 import NeuralNetwork
 from tools.functions import load_config_data
 #from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 

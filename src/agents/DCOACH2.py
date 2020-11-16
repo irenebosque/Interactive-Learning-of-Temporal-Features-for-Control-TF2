@@ -40,15 +40,13 @@ class DCOACH:
             self.policy_action_label = np.reshape(action, [1, self.dim_a])
 
     def _single_update(self, neural_network, state_representation, policy_label):
-        #writer = tf.summary.FileWriter('logdir',  neural_network.sess.graph) # irene
 
 
         # TRAIN policy model
         optimizer_policy_model = tf.keras.optimizers.SGD(learning_rate=0.003)
 
         with tf.GradientTape() as tape_policy:
-            #print('state_representation.shape')
-            #print(state_representation.shape)
+
             policy_output = self.policy_model([state_representation])
 
             policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - policy_label))
@@ -56,9 +54,6 @@ class DCOACH:
 
         optimizer_policy_model.apply_gradients(zip(grads, self.policy_model.trainable_variables))
 
-        self.fc_7_weights = self.policy_model.get_layer('fc_7').get_weights()
-        #print('self.fc_7_weights')
-        #print(self.fc_7_weights[-1])
 
     def _batch_update(self, neural_network, transition_model, batch, i_episode, t):
         observation_sequence_batch = [np.array(pair[0]) for pair in batch]  # state(t) sequence
@@ -74,10 +69,9 @@ class DCOACH:
 
         state_representation_batch = transition_model.get_state_representation_batch(neural_network, current_observation_batch, lstm_hidden_state_batch, batch_size)
 
-        #state_representation_batch = transition_model.get_state_representation_batch(neural_network, observation_sequence_batch, action_sequence_batch, current_observation_batch, self.buffer.length(), i_episode, t)
 
         self._single_update(neural_network, state_representation_batch, action_label_batch)
-        #print('agent batchhhhh')
+
 
 
     def feed_h(self, h):
