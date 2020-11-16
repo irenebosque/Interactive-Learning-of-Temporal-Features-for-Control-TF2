@@ -1,5 +1,6 @@
 import tensorflow as tf
 import os
+import numpy
 
 
 class NeuralNetwork:
@@ -16,13 +17,17 @@ class NeuralNetwork:
 
         self.lstm_out_is_external = lstm_out_is_external
 
+
     def transition_model(self):
         transition_model_input = tf.keras.layers.Input(shape=(None, self.image_width, self.image_width, 1))
         action_in = tf.keras.layers.Input(shape=(None, 1))
-        lstm_hidden_state_h_in = tf.keras.layers.Input(shape=(150))
+        lstm_hidden_state_h_in = tf.keras.layers.Input(shape=(150), name='lstm_hidden_state_h_in')
         lstm_hidden_state_c_in = tf.keras.layers.Input(shape=(150))
         lstm_hidden_state_h_out = tf.keras.layers.Input(shape=(150))
         lstm_hidden_state_c_out = tf.keras.layers.Input(shape=(150))
+        condition_lstm = tf.keras.layers.Input(shape=(1), name='condition_lstm')
+       # condition_lstm =condition_lstm.numpy()
+        #condition_lstm_out = tf.keras.layers.Dense(1)(condition_lstm)
 
         lstm_hidden_state_in = [lstm_hidden_state_h_in, lstm_hidden_state_c_in]
 
@@ -55,9 +60,12 @@ class NeuralNetwork:
         lstm_out_internal = h_state
         lstm_out_external = lstm_hidden_state_h_out
 
-        final_memory_state = tf.cond(self.lstm_out_is_external == 1, lambda: lstm_out_external,
-                                     lambda: lstm_out_internal)
+        #final_memory_state = tf.cond(condition_lstm[2] == 1, lambda: lstm_out_external,
+                                    # lambda: lstm_out_internal)
 
+        final_memory_state = tf.keras.backend.switch(condition=tf.keras.backend.equal(condition_lstm[0], 7), then_expression=lambda: lstm_out_external, else_expression=lambda: lstm_out_internal)
+
+        #final_memory_state = h_state
         concat2_part1 = final_memory_state[:, -150:]
         concat2_part2 = latent_space[:, -1, :]
         concat_2 = tf.concat([concat2_part1, concat2_part2], axis=1)
@@ -80,15 +88,12 @@ class NeuralNetwork:
 
         model_transition = tf.keras.Model(
             inputs=[transition_model_input, action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
-                    lstm_hidden_state_h_out, lstm_hidden_state_c_out],
-            outputs=[h_state, c_state, state_representation, transition_model_output],
-            # last one is just an extra to print things for debuging
+                    lstm_hidden_state_h_out, lstm_hidden_state_c_out, condition_lstm],
+            outputs=[h_state, c_state, state_representation, transition_model_output, condition_lstm[0]],
+
             name="model_transition")
 
-        tf.keras.utils.plot_model(model_transition,
-                                  to_file='model_transition.png',
-                                  show_shapes=True,
-                                  show_layer_names=True)
+
 
         return model_transition
 
