@@ -53,7 +53,12 @@ class DCOACH:
             grads = tape_policy.gradient(policy_loss, self.policy_model.trainable_variables)
 
         optimizer_policy_model.apply_gradients(zip(grads, self.policy_model.trainable_variables))
-
+        '''
+        tf.keras.utils.plot_model(self.policy_model,
+                                  to_file='policy.png',
+                                  show_shapes=True,
+                                  show_layer_names=True)
+        '''
 
     def _batch_update(self, neural_network, transition_model, batch, i_episode, t):
         observation_sequence_batch = [np.array(pair[0]) for pair in batch]  # state(t) sequence

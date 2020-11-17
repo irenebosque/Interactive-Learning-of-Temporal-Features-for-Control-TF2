@@ -146,7 +146,7 @@ class TransitionModel:
             lstm_hidden_state_c_in = tf.cast(tf.zeros([20, 150]), tf.float32)
             dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([20, 150]), tf.float32)
             dummy_lstm_hidden_state_c_out = tf.cast(tf.zeros([20, 150]), tf.float32)
-            condition_lstm = tf.constant([[[7]]])
+            condition_lstm = tf.constant([[[1]]])
             transition_model_label = np.reshape(predictions, [self.transition_model_sampling_size, self.image_width,
                                                               self.image_width, 1]),
 
@@ -171,8 +171,10 @@ class TransitionModel:
             tf.keras.utils.plot_model(self.transition_model,
                                       to_file='model_simple_lstm_innnnnn2.png',
                                       show_shapes=True,
-                                      show_layer_names=True)            
+                                      show_layer_names=True) 
             '''
+
+
 
             optimizer_transition_model.apply_gradients(zip(grads, self.transition_model.trainable_variables))
 
@@ -188,7 +190,7 @@ class TransitionModel:
 
         self._preprocess_observation(np.array(observation))
 
-        neural_network.model_parameters(lstm_out_is_external=1) # 1 means yes 1=7, 0,9
+
 
         if i_episode == 0 and t == 0:
             self.transition_model = neural_network.transition_model()
@@ -204,7 +206,7 @@ class TransitionModel:
         lstm_hidden_state_c_out = self.lstm_hidden_state_c
         #condition_lstm =tf.ones([1,1,8], tf.float32)
         #condition_lstm2 = [[[2]]]
-        condition_lstm = tf.constant([[[7]]])
+        condition_lstm = tf.constant([[[1]]])
 
         #print('condition_lstm')
         #print(condition_lstm)
@@ -232,8 +234,8 @@ class TransitionModel:
             np.reshape(action_sequence_batch, [batch_size, self.training_sequence_length, self.dim_a]),
             dtype=tf.float32)
 
-        neural_network.model_parameters(lstm_out_is_external=0)
-        condition_lstm = tf.constant([[[9]]])
+
+        condition_lstm = tf.constant([[[0]]])
         lstm_hidden_state_h_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
         lstm_hidden_state_c_in = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
         dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([batch_size, 150]), tf.float32)
@@ -248,8 +250,8 @@ class TransitionModel:
 
     def get_state_representation_batch(self, neural_network, current_observation, lstm_hidden_state_batch, batch_size):
 
-        neural_network.model_parameters(lstm_out_is_external=1)
-        condition_lstm = tf.constant([[[7]]])
+
+        condition_lstm = tf.constant([[[1]]])
         transition_model_input2 = tf.convert_to_tensor(
             np.reshape(current_observation, [batch_size, 1, self.image_width, self.image_width, 1]), dtype=tf.float32)
 
@@ -271,8 +273,8 @@ class TransitionModel:
 
         reshaped_network_input = tf.reshape(self.network_input[-1], [1, 1, 64, 64, 1])
 
-        neural_network.model_parameters(lstm_out_is_external=tf.constant(0)) #doesnt matter what you put here
-        condition_lstm = tf.constant([[[9]]])
+
+        condition_lstm = tf.constant([[[0]]])
         lstm_hidden_state_h_in = self.lstm_hidden_state_h
         lstm_hidden_state_c_in = self.lstm_hidden_state_c
         dummy_lstm_hidden_state_h_out = tf.cast(tf.zeros([1, 150]), tf.float32)

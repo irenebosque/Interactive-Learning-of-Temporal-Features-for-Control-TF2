@@ -13,9 +13,6 @@ class NeuralNetwork:
         self.network_loc = network_loc
         self.transition_model_learning_rate = transition_model_learning_rate
 
-    def model_parameters(self, lstm_out_is_external):
-
-        self.lstm_out_is_external = lstm_out_is_external
 
 
     def transition_model(self):
@@ -63,7 +60,9 @@ class NeuralNetwork:
         #final_memory_state = tf.cond(condition_lstm[2] == 1, lambda: lstm_out_external,
                                     # lambda: lstm_out_internal)
 
-        final_memory_state = tf.keras.backend.switch(condition=tf.keras.backend.equal(condition_lstm[0], 7), then_expression=lambda: lstm_out_external, else_expression=lambda: lstm_out_internal)
+        final_memory_state = tf.keras.backend.switch(condition=tf.keras.backend.equal(condition_lstm[0], 1),
+                                                     then_expression=lambda: lstm_out_external,
+                                                     else_expression=lambda: lstm_out_internal)
 
         #final_memory_state = h_state
         concat2_part1 = final_memory_state[:, -150:]
