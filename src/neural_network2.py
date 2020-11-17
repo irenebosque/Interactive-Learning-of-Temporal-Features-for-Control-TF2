@@ -19,12 +19,12 @@ class NeuralNetwork:
 
 
     def transition_model(self):
-        transition_model_input = tf.keras.layers.Input(shape=(None, self.image_width, self.image_width, 1))
-        action_in = tf.keras.layers.Input(shape=(None, 1))
+        transition_model_input = tf.keras.layers.Input(shape=(None, self.image_width, self.image_width, 1), name='transition_model_input')
+        action_in = tf.keras.layers.Input(shape=(None, 1), name='action_in')
         lstm_hidden_state_h_in = tf.keras.layers.Input(shape=(150), name='lstm_hidden_state_h_in')
-        lstm_hidden_state_c_in = tf.keras.layers.Input(shape=(150))
-        lstm_hidden_state_h_out = tf.keras.layers.Input(shape=(150))
-        lstm_hidden_state_c_out = tf.keras.layers.Input(shape=(150))
+        lstm_hidden_state_c_in = tf.keras.layers.Input(shape=(150), name='lstm_hidden_state_c_in')
+        lstm_hidden_state_h_out = tf.keras.layers.Input(shape=(150), name='lstm_hidden_state_h_out')
+        lstm_hidden_state_c_out = tf.keras.layers.Input(shape=(150), name='lstm_hidden_state_c_out')
         condition_lstm = tf.keras.layers.Input(shape=(1), name='condition_lstm')
        # condition_lstm =condition_lstm.numpy()
         #condition_lstm_out = tf.keras.layers.Dense(1)(condition_lstm)
@@ -94,14 +94,13 @@ class NeuralNetwork:
             name="model_transition")
 
 
-
         return model_transition
 
     def policy_model(self):
 
         # Inputs
-        state_representation_input = tf.keras.layers.Input(shape=(1000), batch_size=None)
-        self.policy_input = tf.keras.layers.LayerNormalization()(state_representation_input)
+        state_representation_input = tf.keras.layers.Input(shape=(1000), batch_size=None, name='state_representation_input')
+        self.policy_input = tf.keras.layers.LayerNormalization(name='norm_policy')(state_representation_input)
 
         # Fully connected layers
         fc_5 = tf.keras.layers.Dense(1000, activation="relu", name='fc_5')(self.policy_input)
