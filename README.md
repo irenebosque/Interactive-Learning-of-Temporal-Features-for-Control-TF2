@@ -1,5 +1,8 @@
 # Interactive-Learning-of-Temporal-Features-for-Control-TF2
 
+![transition model](transition_model.png)
+![transition model](policy_model.png)
+
 In TensorFlow 2 you can create a machine learning model following one of these 3 methods:
 1. Keras **Sequential API**: appropriate for a plain stack of layers where each layer has exactly one input tensor and one output tensor.
 2. Keras **Functional API**: More flexible than the Sequential API. It can handle shared layers, and multiple inputs or outputs.
@@ -7,7 +10,7 @@ In TensorFlow 2 you can create a machine learning model following one of these 3
 
 In this code, both the `transition_model` and the `policy_model` have been created with the Keras **Functional API** available in TensorFlow2. ([Functional API in TensorFlow2 link](https://www.tensorflow.org/guide/keras/functional))
 
-![transition model](transition_model.png)
+
 The previous diagram is obtained with the command `tf.keras.utils.plot_model(self.transition_model_training)`
 
 
