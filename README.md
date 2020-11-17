@@ -1,7 +1,34 @@
 # Interactive-Learning-of-Temporal-Features-for-Control-TF2
+### Transition model
+
+Inputs to the transition model:
+- action
+- transition_model_input
+- condition_lstm
+- lstm_hidden_state_h_in
+- lstm_hidden_state_c_in 
+- lstm_hidden_state_h_out
+- lstm_hidden_state_c_out
+
+```python
+model_transition = tf.keras.Model(
+            inputs=[transition_model_input, action_in, lstm_hidden_state_h_in, lstm_hidden_state_c_in,
+                    lstm_hidden_state_h_out, lstm_hidden_state_c_out, condition_lstm],
+            outputs=[h_state, c_state, state_representation, transition_model_output, condition_lstm[0]],
+
+            name="model_transition")
+ ```
 
 ![transition model](transition_model.png)
+
+
+
+
+### Policy model
 ![transition model](policy_model.png)
+
+
+⚠️ Next text need to be updated!
 
 In TensorFlow 2 you can create a machine learning model following one of these 3 methods:
 1. Keras **Sequential API**: appropriate for a plain stack of layers where each layer has exactly one input tensor and one output tensor.
