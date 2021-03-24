@@ -28,7 +28,6 @@ class Feedback:
         self.evaluation = False
         self.model_training = False
 
-
     def key_press(self, k, mod):
         if k == key.A:
             self.h = self.h_right
@@ -70,7 +69,7 @@ class Feedback:
                 or k == key.A or k == key.D or k == key.NUM_1 or k == key.NUM_3 or k == key.NUM_4 or k == key.NUM_6:
             self.h = self.h_null
 
-    def get_h(self):
+    def get_feedback(self):
         return self.h
 
     def ask_for_done(self):

@@ -1,6 +1,7 @@
 import numpy as np
 from tools.functions import str_2_array
 from buffer import Buffer
+import tensorflow as tf
 
 """
 Implementation of HG-DAgger without uncertainty estimation
@@ -23,6 +24,21 @@ class HG_DAGGER:
         # Initialize HG_DAgger buffer
         self.buffer = Buffer(min_size=buffer_min_size, max_size=buffer_max_size)
 
+    @tf.function
+    def _update_policy(self, neural_network, state_representation, policy_label):
+        # Train policy model
+        with tf.GradientTape() as tape_policy:
+            policy_output = self._eval_action(neural_network, state_representation)
+            policy_loss = 0.5 * tf.reduce_mean(tf.square(policy_output - tf.cast(policy_label, dtype=tf.float32)))
+            grads = tape_policy.gradient(policy_loss, neural_network.NN_policy.trainable_variables)
+
+        neural_network.policy_optimizer.apply_gradients(zip(grads, neural_network.NN_policy.trainable_variables))
+
+    @tf.function
+    def _eval_action(self, neural_network, state_representation):
+        action = neural_network.NN_policy(state_representation)
+        return action
+
     def feed_h(self, h):
         self.h = np.reshape(h, [1, self.dim_a])
 
@@ -33,8 +49,7 @@ class HG_DAGGER:
             action = self.h
             print("feedback:", self.h[0])
         else:
-            action = neural_network.sess.run(neural_network.policy_output,
-                                             feed_dict={'policy/state_representation:0': state_representation})
+            action = self._eval_action(neural_network, state_representation).numpy()
 
         out_action = []
 
@@ -60,12 +75,18 @@ class HG_DAGGER:
                 action_sequence_batch = [np.array(pair[1]) for pair in batch]
                 current_observation_batch = [np.array(pair[2]) for pair in batch]  # last
                 action_label_batch = [np.array(pair[3]) for pair in batch]
+                batch_size = len(observation_sequence_batch)
 
+                # Get batch of hidden states
+                lstm_hidden_state_batch = transition_model.get_lstm_hidden_state_batch(neural_network,
+                                                                                       observation_sequence_batch,
+                                                                                       action_sequence_batch,
+                                                                                       batch_size)
+
+                # Compute state representation
                 state_representation_batch = transition_model.get_state_representation_batch(neural_network,
-                                                                                             observation_sequence_batch,
-                                                                                             action_sequence_batch,
-                                                                                             current_observation_batch)
+                                                                                             current_observation_batch,
+                                                                                             lstm_hidden_state_batch,
+                                                                                             batch_size)
 
-                neural_network.sess.run(neural_network.train_policy,
-                                        feed_dict={'policy/state_representation:0': state_representation_batch,
-                                                   'policy/policy_label:0': action_label_batch})
+                self._update_policy(neural_network, state_representation_batch, action_label_batch)
